@@ -153,9 +153,9 @@ function interrompiMovimento(mezzo) {
         mezzo._timerStato4 = null;
     }
     
-    // Se il mezzo era in stato 7 (rientro in sede), ripulisci eventuali comunicazioni
+    // Se il mezzo era in stato 7 (rientro in sede), mostra solo 'missione interrotta'
     if (mezzo.stato === 7) {
-        mezzo.comunicazioni = mezzo.comunicazioni?.filter(c => !c.includes("Rientro")) || [];
+        mezzo.comunicazioni = ['missione interrotta'];
     }
 }
 
@@ -230,6 +230,14 @@ const _oldSetStatoMezzo = setStatoMezzo;
 setStatoMezzo = function(mezzo, nuovoStato) {
     const prevStato = mezzo.stato;
     const res = _oldSetStatoMezzo.apply(this, arguments);
+    // Increment virtual patient count when a mezzo drops off (state 6)
+    if (res && nuovoStato === 6 && mezzo.ospedale && window.game.hospitalPatientCount) {
+        const key = mezzo.ospedale.nome;
+        if (window.game.hospitalPatientCount[key] != null) {
+            window.game.hospitalPatientCount[key]++;
+        }
+    }
+    // Patch: remove blinking msg on state change
     if (res && mezzo._msgLampeggia && nuovoStato !== prevStato) {
         mezzo._msgLampeggia = false;
         if (mezzo.comunicazioni && mezzo.comunicazioni.length > 0) {
@@ -494,7 +502,7 @@ class EmergencyDispatchGame {
                         simTimeout(() => {
                             setStatoMezzo(m, 6);
                             aggiornaMissioniPerMezzo(m);
-                            m.comunicazioni = (m.comunicazioni||[]).concat([`[FORZATO] Libero in ospedale`]);
+                            m.comunicazioni = [];
                             if(window.game.ui) window.game.ui.updateStatoMezzi(m);
                             if(window.game.updateMezzoMarkers) window.game.updateMezzoMarkers();
                         }, randomMinuti(1, 2) * 60);
@@ -519,7 +527,7 @@ class EmergencyDispatchGame {
                 if (m.stato === 5 && m._statoEnterTime && now - m._statoEnterTime > 25*60) {
                     setStatoMezzo(m, 6);
                     aggiornaMissioniPerMezzo(m);
-                    m.comunicazioni = (m.comunicazioni||[]).concat([`[FORZATO] Libero in ospedale`]);
+                    m.comunicazioni = [];
                     if(window.game.ui) window.game.ui.updateStatoMezzi(m);
                     if(window.game.updateMezzoMarkers) window.game.updateMezzoMarkers();
                 }
@@ -560,19 +568,51 @@ class EmergencyDispatchGame {
     }
 
     async initialize() {
-        try {
-            await this.loadChiamate();
-            await this.loadStatiMezzi();
-            await this.loadMezzi();
-            this.initializeMap();
-            await this.loadHospitals();
+         try {
+             await this.loadChiamate();
+             await this.loadStatiMezzi();
+             await this.loadMezzi();
+             this.initializeMap();
+             await this.loadHospitals();
+            // Initialize virtual patient counters per hospital
+            this.hospitalPatientCount = {};
+            for (const h of this.hospitals) {
+                // Assign initial random occupancy between 0% and 70%
+                const cap = Number(h.raw?.["N° pazienti Max"] || 0);
+                const initCount = cap > 0 ? Math.floor(cap * Math.random() * 0.7) : 0;
+                this.hospitalPatientCount[h.nome] = initCount;
+            }
+            // Function to periodically discharge patients based on hospital class
+            const discharge = () => {
+                this.hospitals.forEach(h => {
+                    const cap = Number(h.raw?.["N° pazienti Max"] || 0);
+                    if (cap <= 0) return;
+                    const cls = (h.raw?.CLASSE || h.raw?.classe || '').toUpperCase();
+                    let remove = 0;
+                    if (cls === 'PS') remove = 2;
+                    else if (cls === 'DEA') remove = 4;
+                    else if (cls === 'EAS') remove = 6;
+                    this.hospitalPatientCount[h.nome] = Math.max(0, this.hospitalPatientCount[h.nome] - remove);
+                });
+                if (this.ui && typeof this.ui.updateStatoMezzi === 'function') {
+                    this.ui.updateStatoMezzi();
+                }
+                // Schedule next discharge between 30 and 120 simulated minutes
+                simTimeout(discharge, randomMinuti(30, 120) * 60);
+            };
+            // Start periodic discharge simulation
+            simTimeout(discharge, randomMinuti(30, 120) * 60);
+            // Populate UI with initial vehicle and hospital lists on startup
+            if (this.ui && typeof this.ui.updateStatoMezzi === 'function') {
+                this.ui.updateStatoMezzi();
+            }
             // Start automatic call generation
             if (window.simTimeInit) {
                 this.scheduleNextCall();
             }
-        } catch (e) {
-            console.error("Error during initialization:", e);
-        }
+         } catch (e) {
+             console.error("Error during initialization:", e);
+         }
     }
 
     // Schedule automatic new calls at random intervals based on simulated time
@@ -1178,7 +1218,7 @@ class EmergencyDispatchGame {
 
         // Funzione per aggiornare la tabella dei mezzi nel popup missione
         this.updateMissionPopupTable = function(call) {
-            const mezziFiltrati = this.mezzi.filter(m => [1,2,6,7].includes(m.stato) || (call.mezziAssegnati||[]).includes(m.nome_radio));
+            const mezziFiltrati = this.mezzi.filter(m => [1,2,7].includes(m.stato));
             let html = `<table class='stato-mezzi-table' style='width:100%;margin-bottom:0;'>
                 <thead><tr>
                     <th style='width:40%;text-align:left; padding:1px 2px;'>Nome</th>
