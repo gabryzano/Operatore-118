@@ -641,18 +641,21 @@ class EmergencyDispatchGame {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
         this.updatePostazioneMarkers();
         this.updateMezzoMarkers();
-    }
-
-    async loadMezzi() {
+    }    async loadMezzi() {
          try {
              // Determine base mezzi file based on selected central
              let baseFile = 'src/data/mezzi_sra.json';
              switch(window.selectedCentral) {
                  case 'SRL': baseFile = 'src/data/Mezzi_SRL.json'; break;
                  case 'SRM': baseFile = 'src/data/mezzi_srm.json'; break;
-                 case 'SRP': baseFile = 'src/data/mezzi_srp.json'; break;
+                 case 'SRP': baseFile = 'src/data/mezzi_srp.json'; break; // Modificato per compatibilità con GitHub Pages
              }
+             // Fetch the base file directly
              const response = await fetch(baseFile);
+             if (!response.ok) {
+                 console.error(`File ${baseFile} non trovato (HTTP ${response.status}). Caricamento mezzi interrotto.`);
+                 return;
+             }
              let mezzi = await response.json();
 
             // Se il file JSON esporta un oggetto con una proprietà (es: { Sheet1: [...] }), estrai l'array
@@ -754,8 +757,7 @@ class EmergencyDispatchGame {
                         if (!this.postazioniMap[key]) this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isSRL:true };
                         this.postazioniMap[key].mezzi.push(mezzo);
                     });
-                } catch(e){console.error(e)}
-                // SRP
+                } catch(e){console.error(e)}                // SRP
                 try {
                     const res = await fetch('src/data/mezzi_srp.json');
                     let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
@@ -771,10 +773,8 @@ class EmergencyDispatchGame {
             }
             // SRL: load SRA, SRP
             if (window.selectedCentral === 'SRL') {
-                for (const [file,prefix,flag] of [
-                    ['src/data/mezzi_sra.json','SRA','isSRL'],
-                    ['src/data/mezzi_srp.json','SRP','isSRP'],
-                    ['src/data/mezzi_srm.json','SRM','isSRM']
+                for (const [file,prefix,flag] of [                    ['src/data/mezzi_sra.json','SRA','isSRL'],
+                    ['src/data/mezzi_srp.json','SRP','isSRL']
                 ]) {
                     try {
                         const res = await fetch(file);
@@ -784,7 +784,7 @@ class EmergencyDispatchGame {
                             const [lat,lon]=(item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if(lat==null||lon==null)return;
                             const mezzo={ nome_radio:`(${prefix}) ${(item['Nome radio']||'').trim()}`, postazione:nomePost, tipo_mezzo:item['Mezzo']||'', convenzione:item['Convenzione']||'', Giorni:item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro':item['Orario di lavoro']||'', lat, lon, stato:1 };
                             this.mezzi.push(mezzo); const key=`${nomePost}_${lat}_${lon}`;
-                            if(!this.postazioniMap[key]) this.postazioniMap[key]={ nome:nomePost, lat, lon, mezzi:[], [flag]:true };
+                            if(!this.postazioniMap[key]) this.postazioniMap[key]={ nome:nomePost, lat, lon, mezzi:[], isSRL:true };
                             this.postazioniMap[key].mezzi.push(mezzo);
                         });
                     } catch(e){console.error(e)}
@@ -792,8 +792,7 @@ class EmergencyDispatchGame {
             }
             // SRM: load SRA, SRL, SRP
             if (window.selectedCentral === 'SRM') {
-                for (const [file,prefix,flag] of [
-                    ['src/data/mezzi_sra.json','SRA','isSRM'],
+                for (const [file,prefix,flag] of [                    ['src/data/mezzi_sra.json','SRA','isSRM'],
                     ['src/data/Mezzi_SRL.json','SRL','isSRL'],
                     ['src/data/mezzi_srp.json','SRP','isSRP']
                 ]) {
@@ -831,7 +830,8 @@ class EmergencyDispatchGame {
                     ['src/data/Mezzi_SRL.json','SRL','isSRP']
                 ]) {
                     try {
-                        const res=await fetch(file); let arr=await res.json(); if(!Array.isArray(arr)) arr=Object.values(arr).find(v=>Array.isArray(v))||[];
+                        const res = await fetch(file);
+                        let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
                         arr.forEach(item=>{
                             const nomePost=(item['Nome Postazione']||'').trim(); if(!nomePost)return;
                             const [lat,lon]=(item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if(lat==null||lon==null)return;
@@ -1346,14 +1346,15 @@ class EmergencyDispatchGame {
         // Sostituisci ogni placeholder con l'indirizzo selezionato
         testo_chiamata = (testo_chiamata || '').replace(/\(indirizzo [^)]+\)/gi, indirizzo.indirizzo);
          
-        // Randomly select case type (stabile/poco_stabile/critico)
+        // Randomly select case type (stabile/poco stabile/critico)
+
         const caseTypes = ['caso_stabile', 'caso_poco_stabile', 'caso_critico'];
-        const weights = [0.5, 0.3, 0.2]; // 50% stable, 30% less stable, 20% critical
+        const weights = [0.5, 0.3, 0.2]; // 50% stable,  30% less stable, 20% critical
         let selectedCase = null;
 
         const rand = Math.random();
         let sum = 0;
-        for (let i = 0; i < weights.length; i++) {
+               for (let i = 0; i < weights.length; i++) {
             sum += weights[i];
             if (rand < sum) {
                 selectedCase = caseTypes[i];
