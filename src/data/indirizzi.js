@@ -312,6 +312,8 @@ window.categorizzaIndirizzi = function() {
     };
 
     window.indirizziReali.forEach(i => {
+        // Skip entries with no indirizzo
+        if (!i.indirizzo) return;
         if (i.indirizzo.match(/(Via|Piazza|Viale|Vicolo|Corso|Largo|Contrada|Borgo|Frazione|Strada)/i) && !i.indirizzo.match(/(RSA|Casa di Riposo|Ospedale|Centro Commerciale|Hotel|Ristorante|Stadium|Stadio|Scuola|Istituto|Liceo|Azienda|S.p.A.|Srl|S.R.L.|SPA|SDA|SDF|Gruppo|Group|Industriale|Fabbrica|Associazione|Centrale|Levissima|Iperal|Poli|Metallurgica|Italtrans|ABB|Tenaris|Brembo|Italcementi|Gewiss|RadiciGroup|Persico|Fassi|A2A|Feralpi|Cembre|Camozzi|Omb|Gefran|Beretta|Lonati|Lucchini|Sanpellegrino|Pinchetti|Quadrio|De Simoni|Saraceno|Romegialli|Leonardo|Calini|Arnaldo|Abba|Ballini|Castelli|Tartaglia|Lunardi|Capirola|Pascal|Olivelli|Putelli|Piazzi|Perpenti|Donegani|Falcone|Quarenghi|Natta|Lussana|Sarpi|Archimede|Turoldo|Einaudi|Marconi|Verdi|Mazzini|Carducci|Europa|Gavazzeni|Carnovali|Camozzi|Guzzanica|Portico|Le Due Torri|Curno|Excelsior|San Marco|Da Mimmo|Il Gourmet|Cristallo Palace|NH|Piazza Vecchia|Continente Mapello|Elnòs|Le Rondinelle|Freccia Rossa|Leone|Vittoria|Igea|Castello Malvezzi|La Sosta|Acquaviva|Italmark|Iperal|Europa|Trippi|Rezia|La Spina)/i)) {
             categorie.abitazione.push(i);
         } else if (i.indirizzo.match(/(A4|SS|SP|strada|casello|ponte|galleria|zona|confine|bretella|tangenziale|rotonda|autostrada|statale|provinciale)/i)) {

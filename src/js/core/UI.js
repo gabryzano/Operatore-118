@@ -311,19 +311,13 @@ class GameUI {
 
             // Se non ci sono ospedali, mostra messaggio di caricamento
             if (!ospedali.length) {
-                if(!dettagli.innerHTML.includes('Caricamento ospedali in corso')) {
+                if (!dettagli.innerHTML.includes('Caricamento ospedali in corso')) {
                     dettagli.innerHTML += `<div style='color:#d32f2f;font-weight:bold;'>Caricamento ospedali in corso...</div>`;
                 }
-                setTimeout(()=>{
-                    this.updateMissioneInCorso(call);
-                    if ((window.game && window.game.hospitals) ? window.game.hospedali.length > 0 : (this.game.hospedali||[]).length > 0 && window.game && window.game.calls) {
-                        let callsArr = [];
-                        if (typeof window.game.calls.forEach === 'function') {
-                            window.game.calls.forEach(c => callsArr.push(c));
-                        } else {
-                            callsArr = Object.values(window.game.calls);
-                        }
-                        callsArr.forEach(c => this.updateMissioneInCorso(c));
+                setTimeout(() => {
+                    // Refresh missions once hospitals finally loaded
+                    if (window.game && window.game.hospitals && window.game.hospitals.length > 0) {
+                        window.game.calls.forEach(c => this.updateMissioneInCorso(c));
                     }
                 }, 500);
                 return;
@@ -535,19 +529,21 @@ class GameUI {
                                 mezzo.ospedale = lead.ospedale;
                                 mezzo.codice_trasporto = 'Verde';
                                 mezzo._trasportoConfermato = true;
-                                mezzo.comunicazioni = (mezzo.comunicazioni || []).concat([`Accompagna ${lead.nome_radio} in ospedale ${lead.ospedale.nome} (Codice Verde)`]);
+                                // mostra solo nome ospedale e codice iniziale 'V'
+                                mezzo.comunicazioni = [lead.ospedale.nome + ', V'];
                                 aggiornaMissioniPerMezzo(mezzo);
                                 if (window.avanzaMezzoAStato4DopoConferma) window.avanzaMezzoAStato4DopoConferma(mezzo);
                             }
                             return;
                         }
-                        // Return to base
+                        // Rientro alla base
                         if (ospedaleSel === '__rientro__') {
                             mezzo.ospedale = null;
                             mezzo.codice_trasporto = null;
                             mezzo._trasportoConfermato = false;
                             mezzo._trasportoAvviato = false;
-                            mezzo.comunicazioni = (mezzo.comunicazioni || []).concat([`Rientro in sede richiesto`]);
+                            // mostra solo 'missione interrotta'
+                            mezzo.comunicazioni = ['missione interrotta'];
                             setStatoMezzo(mezzo, 7);
                             aggiornaMissioniPerMezzo(mezzo);
                             if (window.game && window.game.postazioniMap && mezzo.postazione) {
@@ -569,7 +565,8 @@ class GameUI {
                         mezzo.ospedale = ospedali.find(o => o.nome.trim() === ospedaleSel) || mezzo.ospedale;
                         if (codiceSel) mezzo.codice_trasporto = codiceSel;
                         mezzo._trasportoConfermato = true;
-                        mezzo.comunicazioni = (mezzo.comunicazioni || []).concat([`Destinazione: ${ospedaleSel}, Codice: ${codiceSel}`]);
+                        // mostra solo nome ospedale e codice iniziale
+                        mezzo.comunicazioni = [ospedaleSel + ', ' + codiceSel.charAt(0)];
                         aggiornaMissioniPerMezzo(mezzo);
                         if (window.avanzaMezzoAStato4DopoConferma) window.avanzaMezzoAStato4DopoConferma(mezzo);
                     };
@@ -595,66 +592,86 @@ class GameUI {
     
     // Aggiorna la lista dei mezzi e i loro stati in tempo reale
     updateStatoMezzi(mezzoCambiato = null) {
-        const div = document.getElementById('statoMezzi');
-        if (!div || !window.game || !window.game.mezzi) return;
+        // Definisce keyframes per lampeggio report pronto (una sola volta)
+        if (!document.getElementById('blink-report-style')) {
+            const style = document.createElement('style');
+            style.id = 'blink-report-style';
+            style.innerHTML = `
+                @keyframes blink-report {
+                    0% { background-color: #ffebee; }
+                    50% { background-color: transparent; }
+                    100% { background-color: #ffebee; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        // Select content container instead of entire box
+        const container = document.querySelector('#statoMezzi .box-content');
+        if (!container || !window.game || !window.game.mezzi) return;
 
-        // Ordina: prima i mezzi che hanno cambiato stato o ricevuto comunicazioni più di recente (escluso stato 8), poi tutti gli altri, poi quelli in stato 8 in fondo
-        // Exclude SRL/SRP vehicles in state 1 or 8
-        let mezzi = window.game.mezzi.filter(m => {
-            // Controlla se il mezzo è SRL o SRP in base al prefisso del nome radio
-            const isExcluded = (m.nome_radio.startsWith('(SRL)') || m.nome_radio.startsWith('(SRP)')) 
-                              && (m.stato === 1 || m.stato === 8);
-            return !isExcluded;
-        });
-         
-         // Mezzi in stato 8 separati
-        const mezziStato8 = mezzi.filter(m => m.stato === 8);
-        let altriMezzi = mezzi.filter(m => m.stato !== 8);
-         
-         // Calcola il timestamp più recente tra _lastEvent e ultimo messaggio
-         altriMezzi.forEach(m => {
-             let lastMsg = 0;
-             if (Array.isArray(m.comunicazioni) && m.comunicazioni.length > 0) {
-                 // Consider only Report pronto messages for timestamp
-                 const reportMsg = m.comunicazioni.find(c => c.includes('Report pronto'));
-                 if (reportMsg) {
-                     lastMsg = m._lastMsgTime || 0;
-                 }
-             }
-             m._sortKey = Math.max(m._lastEvent || 0, lastMsg);
-         });
-         altriMezzi = altriMezzi.sort((a, b) => (b._sortKey || 0) - (a._sortKey || 0));
-         mezziStato8.sort((a, b) => (a.nome_radio || '').localeCompare(b.nome_radio || '')); 
+        // Prepare split-pane layout
+        container.innerHTML = '';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'row';
+        container.style.maxHeight = 'none';
 
-         // Layout a 3 colonne
-         div.innerHTML = '';
-         div.style.maxHeight = '350px';
-         div.style.overflowY = 'auto';
-         div.style.display = 'flex';
-         div.style.flexDirection = 'column';
+        // Create left panel for mezzi and right panel for ospedali
+        container.insertAdjacentHTML('beforeend', `
+            <div id="stateMezziList" style="flex:2;display:flex;flex-direction:column;overflow-y:auto;height:100%;">
+            </div>
+            <div id="hospitalList" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;border-left:1px solid #005baa;padding:4px;">
+                <div style="font-weight:bold;margin-bottom:6px;">Elenco Ospedali</div>
+            </div>
+        `);
+        const stateDiv = container.querySelector('#stateMezziList');
+        const hospDiv = container.querySelector('#hospitalList');
 
-         // HEADER: aggiungi la riga di intestazione
-         div.innerHTML += `
-             <div class="mezzo-header-row" style="display:flex;align-items:center;font-weight:bold;background:#e3e3e3;border-bottom:1px solid #bbb;padding:2px 4px;">
-                 <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">Mezzo</div>
-                 <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">Tipo</div>
-                 <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">Missione</div>
-                 <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">Convenzione</div>
-                 <div style="flex:1;text-align:left;min-width:70px;">Stato</div>
-                 <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">Comunicazioni</div>
-             </div>
-         `;
+        // Build Stato Mezzi header in stateDiv
+        stateDiv.insertAdjacentHTML('beforeend', `
+            <div class="mezzo-header-row" style="display:flex;align-items:center;font-weight:bold;background:#e3e3e3;border-bottom:1px solid #bbb;padding:2px 4px;">
+                <div style="flex:3;overflow:hidden;text-overflow:ellipsis;">Mezzo</div>
+                <div style="flex:2;overflow:hidden;text-overflow:ellipsis;">Tipo/Conv.</div>
+                <div style="flex:1;text-align:left;">Stato</div>
+                <div style="flex:2;overflow:hidden;text-overflow:ellipsis;">Comunicazioni</div>
+            </div>
+        `);
 
-         // Funzione robusta per etichetta stato
-         function getStatoLabel(stato) {
+        // Funzione robusta per etichetta stato
+        function getStatoLabel(stato) {
              if (window.game && window.game.statiMezzi && window.game.statiMezzi[stato] && window.game.statiMezzi[stato].Descrizione) {
                  return window.game.statiMezzi[stato].Descrizione;
              }
              return '';
-         }
+        }
 
-        // Mostra i mezzi filtrati: prima altri, poi stato8
-        [...altriMezzi, ...mezziStato8].forEach(m => {
+        // Prepara liste mezzi: escludi SRL/SRP in stati 1/8
+        const allMezzi = window.game.mezzi || [];
+        let mezzi = allMezzi.filter(m => {
+            const isExcluded = (m.nome_radio.startsWith('(SRL)') || m.nome_radio.startsWith('(SRP)'))
+                              && (m.stato === 1 || m.stato === 8);
+            return !isExcluded;
+        });
+        const mezziStato8 = mezzi.filter(m => m.stato === 8);
+        let altriMezzi = mezzi.filter(m => m.stato !== 8);
+        altriMezzi.forEach(m => {
+            let lastMsg = 0;
+            if (Array.isArray(m.comunicazioni) && m.comunicazioni.length > 0) {
+                const reportMsg = m.comunicazioni.find(c => c.toLowerCase().includes('report pronto'));
+                if (reportMsg) lastMsg = m._lastMsgTime || 0;
+            }
+            m._sortKey = Math.max(m._lastEvent || 0, lastMsg);
+        });
+        altriMezzi.sort((a, b) => (b._sortKey || 0) - (a._sortKey || 0));
+        mezziStato8.sort((a, b) => (a.nome_radio || '').localeCompare(b.nome_radio || ''));
+
+        // Unisci e porta in testa i mezzi con report pronto
+        const merged = [...altriMezzi, ...mezziStato8];
+        merged.sort((a, b) => {
+            const aHas = (a.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto'));
+            const bHas = (b.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto'));
+            return (bHas === true) - (aHas === true);
+        });
+        merged.forEach(m => {
             // Calcola missioneId se presente
             const call = Array.from(window.game.calls.values()).find(c => (c.mezziAssegnati||[]).includes(m.nome_radio));
             const missioneId = call ? call.missioneId : '';
@@ -662,20 +679,63 @@ class GameUI {
             const comunicazione = Array.isArray(m.comunicazioni) && m.comunicazioni.length
                 ? m.comunicazioni[m.comunicazioni.length - 1]
                 : '';
-            // Create a row with name, type, convention, state, and communications
-            div.innerHTML += `
-            <div class="mezzo-row" data-mezzo-id="${m.nome_radio}" style="display:flex;align-items:center;border-bottom:1px solid #ddd;padding:4px 0;">
-                <div class="mezzo-cell" style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">${m.nome_radio}</div>
-                <div class="tipo-cell" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${m.tipo_mezzo || ''}</div>
-                <div class="missione-cell" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${missioneId}</div>
-                <div class="convenzione-cell" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${m.convenzione || ''}</div>
-                <div class="stato-cell" style="flex:1;text-align:left;min-width:70px;">${statoLabel}</div>
-                <div class="comunicazione-cell" style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#555;">${comunicazione}</div>
-            </div>
-            `;
+            // Build row: Nome, Tipo/Convenzione, Stato, Comunicazioni
+            const hasReport = comunicazione.toLowerCase().includes('report pronto');
+            const rowStyle = `display:flex;align-items:center;border-bottom:1px solid #ddd;padding:4px 0;${hasReport ? 'animation: blink-report 1s infinite;' : ''}`;
+            stateDiv.insertAdjacentHTML('beforeend', `
+                <div class="mezzo-row" data-mezzo-id="${m.nome_radio}" style="${rowStyle}">
+                    <div class="mezzo-cell" style="flex:3;overflow:hidden;text-overflow:ellipsis;">${m.nome_radio}</div>
+                    <div class="tipo-cell" style="flex:2;overflow:hidden;text-overflow:ellipsis;">${m.tipo_mezzo || ''}${m.convenzione ? ' - ' + m.convenzione : ''}</div>
+                    <div class="stato-cell" style="flex:1;text-align:left;">${statoLabel}</div>
+                    <div class="comunicazione-cell" style="flex:2;overflow:hidden;text-overflow:ellipsis;color:${hasReport ? '#d32f2f' : '#555'};">${comunicazione}</div>
+                </div>
+            `);
         });
-        // Attach click handlers to new rows
-        const rows = div.querySelectorAll('.mezzo-row');
+
+        // Populate hospital list
+        // Dynamic grouping per centrale operativa
+        const center = window.selectedCentral || 'SRA';
+        const orderMap = {
+            SRA: ['(SRA)','(SRL)','(SRM)','(SRP)'],
+            SRL: [null,'(SRA)','(SRM)','(SRP)'],
+            SRM: [null,'(SRL)','(SRP)','(SRA)'],
+            SRP: [null,'(SRL)','(SRM)','(SRA)']
+        };
+        const order = orderMap[center] || orderMap['SRA'];
+        window.game.hospitals.sort((a, b) => {
+            const nameA = a.nome || '';
+            const nameB = b.nome || '';
+            const grp = name => {
+                for (let i = 0; i < order.length; i++) {
+                    const pat = order[i];
+                    if (pat === null) {
+                        if (!name.startsWith('(')) return i;
+                    } else if (name.startsWith(pat)) {
+                        return i;
+                    }
+                }
+                return order.length;
+            };
+            const ga = grp(nameA), gb = grp(nameB);
+            if (ga !== gb) return ga - gb;
+            // Stesso gruppo: ordina in base al numero di pazienti (flusso) discendente
+            const ca = window.game.hospitalPatientCount[a.nome] || 0;
+            const cb = window.game.hospitalPatientCount[b.nome] || 0;
+            return cb - ca;
+        }).forEach(h => {
+            // Use persistent counter for patient occupancy
+            const capacity = Number(h.raw["N° pazienti Max"] || 0);
+            const count = (window.game.hospitalPatientCount && window.game.hospitalPatientCount[h.nome]) || 0;
+            const pct = capacity ? Math.round((count / capacity) * 100) : 0;
+            hospDiv.insertAdjacentHTML('beforeend', `
+                <div style="padding:2px 4px;border-bottom:1px solid #eee;">
+                    ${h.nome} (${pct}%)
+                </div>
+            `);
+        });
+
+        // Attach event handlers to rows as before, using stateDiv
+        const rows = stateDiv.querySelectorAll('.mezzo-row');
         rows.forEach(row => {
             const mezzoId = row.getAttribute('data-mezzo-id');
             // Click on mezzo name to center map

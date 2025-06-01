@@ -58,7 +58,7 @@
     "Coordinate Postazione": "45.303563,10.468309",
     "Mezzo": "MSB",
     "Nome radio": "CRIASO_112.01D1",
-    "Convenzione": "H12",
+    "Convenzione": "H24",
     "Orario di lavoro": "20:00-8:00",
     "Giorni": "LUN-DOM"
   },
@@ -67,7 +67,7 @@
     "Coordinate Postazione": "45.303563,10.468309",
     "Mezzo": "MSB",
     "Nome radio": "CRICST_112.01D1 ",
-    "Convenzione": "H12",
+    "Convenzione": "H24",
     "Orario di lavoro": "8:00-20:00",
     "Giorni": "LUN-DOM"
   },
@@ -195,7 +195,7 @@
     "Nome radio": "BIACAS_328",
     "Convenzione": "GET",
     "Orario di lavoro": "FASCIA NOTTURNA",
-    "Giorni": "LUN DOM"
+    "Giorni": "LUN-DOM"
   },
   {
     "Nome Postazione": "Croce Bianca Cernusco S/N",
@@ -237,17 +237,8 @@
     "Nome Postazione": "Croce Bianca Legnano",
     "Coordinate Postazione": "45.5935459,8.929332",
     "Mezzo": "MSB",
-    "Nome radio": "BIALEG_209.06A1 ",
-    "Convenzione": "H24",
-    "Orario di lavoro": "00:00-00:00",
-    "Giorni": "LUN-DOM"
-  },
-  {
-    "Nome Postazione": "Croce Bianca Legnano",
-    "Coordinate Postazione": "45.5935459,8.929332",
-    "Mezzo": "MSB",
     "Nome radio": "BIALEG_209.06B1 ",
-    "Convenzione": "H16",
+    "Convenzione": "H24",
     "Orario di lavoro": "6:00-22:00",
     "Giorni": "LUN-DOM"
   },
@@ -285,7 +276,7 @@
     "Nome radio": "BIAMEL_124.12A1",
     "Convenzione": "H24",
     "Orario di lavoro": "00:00-00:00",
-    "Giorni": "LUN DOM"
+    "Giorni": "LUN-DOM"
   },
   {
     "Nome Postazione": "Croce Bianca Melzo",
@@ -303,7 +294,7 @@
     "Nome radio": "BIAPAU_143.15A1",
     "Convenzione": "H24",
     "Orario di lavoro": "00:00-00:00",
-    "Giorni": "LUN DOM"
+    "Giorni": "LUN-DOM"
   },
   {
     "Nome Postazione": "Croce Bianca Paullo",
@@ -312,7 +303,7 @@
     "Nome radio": "BIAPAU_245.15A2",
     "Convenzione": "H12",
     "Orario di lavoro": "7:00-19:00",
-    "Giorni": "LUN DOM"
+    "Giorni": "LUN-DOM"
   },
   {
     "Nome Postazione": "Croce Bianca Paullo",
@@ -321,7 +312,7 @@
     "Nome radio": "LO_002 ",
     "Convenzione": "H12",
     "Orario di lavoro": "8:00-20:00",
-    "Giorni": "LUN DOM"
+    "Giorni": "LUN-DOM"
   },
   {
     "Nome Postazione": "Croce Bianca Quistello",
@@ -437,7 +428,7 @@
     "Mezzo": "MSB",
     "Nome radio": "CRIASO_311",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA NOTTURNA",
+    "Orario di lavoro": "FASCIA NOTTURNA, fascia diurna SAB e DOM",
     "Giorni": "random"
   },
   {
@@ -464,7 +455,7 @@
     "Mezzo": "MSB",
     "Nome radio": "CRICST_315",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA SERALE",
+    "Orario di lavoro": "FASCIA SERALE, fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -500,7 +491,7 @@
     "Mezzo": "MSB",
     "Nome radio": "CRIGAM_366 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA NOTTURNA",
+    "Orario di lavoro": "FASCIA NOTTURNA, fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -572,7 +563,7 @@
     "Mezzo": "MSB",
     "Nome radio": "CRIOSP_308 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA SERALE",
+    "Orario di lavoro": "FASCIA SERALE,  fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -626,7 +617,7 @@
     "Mezzo": "MSB",
     "Nome radio": "CRISIZ_347 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA SERALE",
+    "Orario di lavoro": "FASCIA SERALE,  fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -671,8 +662,8 @@
     "Mezzo": "MSB",
     "Nome radio": "CRIZBP_352",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA NOTTURNA",
-    "Giorni": "LUN DOM"
+    "Orario di lavoro": "FASCIA NOTTURNA,  fascia diurna SAB e DOM",
+    "Giorni": "LUN-DOM"
   },
   {
     "Nome Postazione": "Croce San Francesco",
@@ -707,7 +698,7 @@
     "Mezzo": "MSB",
     "Nome radio": "CROLOD_319",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA SERALE",
+    "Orario di lavoro": "FASCIA SERALE, random fascia diurna",
     "Giorni": "LUN-DOM"
   },
   {
@@ -797,7 +788,7 @@
     "Mezzo": "MSB",
     "Nome radio": "VEROFF_351 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA NOTTURNA",
+    "Orario di lavoro": "FASCIA NOTTURNA,  fascia diurna SAB e DOM",
     "Giorni": "random"
   },
   {
@@ -824,7 +815,7 @@
     "Mezzo": "MSB",
     "Nome radio": "VER_PV_315 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA SERALE",
+    "Orario di lavoro": "FASCIA SERALE,  fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -860,7 +851,7 @@
     "Mezzo": "MSB",
     "Nome radio": "VERVIG_305 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA NOTTURNA",
+    "Orario di lavoro": "FASCIA NOTTURNA,  fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -869,7 +860,7 @@
     "Mezzo": "MSB",
     "Nome radio": "SOCDIA_306 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA DIURNA",
+    "Orario di lavoro": "FASCIA DIURNA e fascia serale",
     "Giorni": "LUN-DOM"
   },
   {
@@ -887,7 +878,7 @@
     "Mezzo": "MSB",
     "Nome radio": "INTMAR_360 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA DIURNA",
+    "Orario di lavoro": "FASCIA DIURNA e fascia sesrale",
     "Giorni": "LUN-VEN"
   },
   {
@@ -913,7 +904,7 @@
     "Coordinate Postazione": "45.593604,8.927609",
     "Mezzo": "MSB",
     "Nome radio": "NORLEG_167.06B1 ",
-    "Convenzione": "H8",
+    "Convenzione": "H24",
     "Orario di lavoro": "22:00-6:00",
     "Giorni": "LUN-DOM"
   },
@@ -1130,7 +1121,7 @@
     "Mezzo": "MSA1",
     "Nome radio": "PV_002 ",
     "Convenzione": "H12",
-    "Orario di lavoro": "8:00-20:00",
+    "Orario di lavoro": "20:00-8:00",
     "Giorni": "LUN-DOM"
   },
   {
@@ -1170,8 +1161,17 @@
     "Giorni": "LUN-DOM"
   },
   {
-    "Nome Postazione": "Postazione AREU - Voghera",
+    "Nome Postazione": "Postazione AREU - Vigevano",
     "Coordinate Postazione": "45.319832,8.865183",
+    "Mezzo": "MSA2",
+    "Nome radio": "PV_003 ",
+    "Convenzione": "H24",
+    "Orario di lavoro": "00:00-00:00",
+    "Giorni": "LUN-DOM"
+  },
+   {
+    "Nome Postazione": "Postazione AREU - Voghera",
+    "Coordinate Postazione": "44.994912,9.015274",
     "Mezzo": "MSA2",
     "Nome radio": "PV_005 ",
     "Convenzione": "H24",
@@ -1300,7 +1300,7 @@
     "Coordinate Postazione": "45.444886,8.988326",
     "Mezzo": "MSB",
     "Nome radio": "AZZROV_141.08A1 ",
-    "Convenzione": "H12",
+    "Convenzione": "H24",
     "Orario di lavoro": "20:00-8:00",
     "Giorni": "LUN-DOM"
   },
@@ -1309,7 +1309,7 @@
     "Coordinate Postazione": "45.433016,9.003113",
     "Mezzo": "MSB",
     "Nome radio": "INTMAR_131.08A1 ",
-    "Convenzione": "H12",
+    "Convenzione": "H24",
     "Orario di lavoro": "8:00-20:00",
     "Giorni": "LUN-DOM"
   },
@@ -1382,7 +1382,7 @@
     "Mezzo": "MSB",
     "Nome radio": "SOCVIG_311 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA SERALE",
+    "Orario di lavoro": "FASCIA SERALE, fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   },
   {
@@ -1391,7 +1391,7 @@
     "Mezzo": "MSB",
     "Nome radio": "ASSSRC_312 ",
     "Convenzione": "GET",
-    "Orario di lavoro": "FASCIA NOTTURNA",
+    "Orario di lavoro": "FASCIA NOTTURNA, fascia diurna SAB e DOM",
     "Giorni": "LUN-DOM"
   }
 ]
