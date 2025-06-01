@@ -153,9 +153,9 @@ function interrompiMovimento(mezzo) {
         mezzo._timerStato4 = null;
     }
     
-    // Se il mezzo era in stato 7 (rientro in sede), ripulisci eventuali comunicazioni
+    // Se il mezzo era in stato 7 (rientro in sede), mostra solo 'missione interrotta'
     if (mezzo.stato === 7) {
-        mezzo.comunicazioni = mezzo.comunicazioni?.filter(c => !c.includes("Rientro")) || [];
+        mezzo.comunicazioni = ['missione interrotta'];
     }
 }
 
@@ -230,6 +230,14 @@ const _oldSetStatoMezzo = setStatoMezzo;
 setStatoMezzo = function(mezzo, nuovoStato) {
     const prevStato = mezzo.stato;
     const res = _oldSetStatoMezzo.apply(this, arguments);
+    // Increment virtual patient count when a mezzo drops off (state 6)
+    if (res && nuovoStato === 6 && mezzo.ospedale && window.game.hospitalPatientCount) {
+        const key = mezzo.ospedale.nome;
+        if (window.game.hospitalPatientCount[key] != null) {
+            window.game.hospitalPatientCount[key]++;
+        }
+    }
+    // Patch: remove blinking msg on state change
     if (res && mezzo._msgLampeggia && nuovoStato !== prevStato) {
         mezzo._msgLampeggia = false;
         if (mezzo.comunicazioni && mezzo.comunicazioni.length > 0) {
@@ -439,6 +447,9 @@ class EmergencyDispatchGame {
             rsa: []
         };
 
+        // Counters for mission numbers per SOREU central
+        this.missionCounter = { SRA: 0, SRL: 0, SRM: 0, SRP: 0 };
+
         simInterval(() => {
             aggiornaDisponibilitaMezzi();
             const now = window.simTime
@@ -494,7 +505,7 @@ class EmergencyDispatchGame {
                         simTimeout(() => {
                             setStatoMezzo(m, 6);
                             aggiornaMissioniPerMezzo(m);
-                            m.comunicazioni = (m.comunicazioni||[]).concat([`[FORZATO] Libero in ospedale`]);
+                            m.comunicazioni = [];
                             if(window.game.ui) window.game.ui.updateStatoMezzi(m);
                             if(window.game.updateMezzoMarkers) window.game.updateMezzoMarkers();
                         }, randomMinuti(1, 2) * 60);
@@ -519,7 +530,7 @@ class EmergencyDispatchGame {
                 if (m.stato === 5 && m._statoEnterTime && now - m._statoEnterTime > 25*60) {
                     setStatoMezzo(m, 6);
                     aggiornaMissioniPerMezzo(m);
-                    m.comunicazioni = (m.comunicazioni||[]).concat([`[FORZATO] Libero in ospedale`]);
+                    m.comunicazioni = [];
                     if(window.game.ui) window.game.ui.updateStatoMezzi(m);
                     if(window.game.updateMezzoMarkers) window.game.updateMezzoMarkers();
                 }
@@ -560,19 +571,33 @@ class EmergencyDispatchGame {
     }
 
     async initialize() {
-        try {
-            await this.loadChiamate();
-            await this.loadStatiMezzi();
-            await this.loadMezzi();
-            this.initializeMap();
-            await this.loadHospitals();
+         try {
+             await this.loadChiamate();
+             await this.loadStatiMezzi();
+             await this.loadMezzi();
+             this.initializeMap();
+             await this.loadHospitals();
+            // Initialize virtual patient counters per hospital
+            this.hospitalPatientCount = {};
+            for (const h of this.hospitals) {
+                const capacity = Number(h.raw["N° pazienti Max"] || 0);
+                // Random occupancy percent between 0 and 80
+                const pct = Math.floor(Math.random() * 81);
+                // Compute actual count based on capacity
+                const count = capacity > 0 ? Math.round(capacity * pct / 100) : 0;
+                this.hospitalPatientCount[h.nome] = count;
+            }
+             // Populate UI with initial vehicle and hospital lists on startup
+             if (this.ui && typeof this.ui.updateStatoMezzi === 'function') {
+                 this.ui.updateStatoMezzi();
+             }
             // Start automatic call generation
             if (window.simTimeInit) {
                 this.scheduleNextCall();
             }
-        } catch (e) {
-            console.error("Error during initialization:", e);
-        }
+         } catch (e) {
+             console.error("Error during initialization:", e);
+         }
     }
 
     // Schedule automatic new calls at random intervals based on simulated time
@@ -601,15 +626,36 @@ class EmergencyDispatchGame {
         if (this.map) {
             this.map.remove();
         }
-        this.map = L.map('game-map').setView([45.685783, 9.636633], 13);
+        // Determine initial map center and zoom based on selected central
+        let initCenter = [45.685783, 9.636633]; // default Bergamo (SRA)
+        const initZoom = 13;
+        switch (window.selectedCentral) {
+            case 'SRM': // Ospedale Niguarda, Milano
+                initCenter = [45.5270, 9.1903]; break;
+            case 'SRP': // Pavia
+                initCenter = [45.1847, 9.1582]; break;
+            case 'SRL': // Como
+                initCenter = [45.8081, 9.0852]; break;
+        }
+        this.map = L.map('game-map').setView(initCenter, initZoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
         this.updatePostazioneMarkers();
         this.updateMezzoMarkers();
-    }
-
-    async loadMezzi() {
+    }    async loadMezzi() {
          try {
-             const response = await fetch('src/data/mezzi_sra.json');
+             // Determine base mezzi file based on selected central
+             let baseFile = 'src/data/mezzi_sra.json';
+             switch(window.selectedCentral) {
+                 case 'SRL': baseFile = 'src/data/Mezzi_SRL.json'; break;
+                 case 'SRM': baseFile = 'src/data/mezzi_srm.json'; break;
+                 case 'SRP': baseFile = 'src/data/mezzi_srp.json'; break; // Modificato per compatibilità con GitHub Pages
+             }
+             // Fetch the base file directly
+             const response = await fetch(baseFile);
+             if (!response.ok) {
+                 console.error(`File ${baseFile} non trovato (HTTP ${response.status}). Caricamento mezzi interrotto.`);
+                 return;
+             }
              let mezzi = await response.json();
 
             // Se il file JSON esporta un oggetto con una proprietà (es: { Sheet1: [...] }), estrai l'array
@@ -696,96 +742,303 @@ class EmergencyDispatchGame {
                 });  
             } catch(e) { console.error('Error loading Creli.json:', e); }
 
-            // Add SRL vehicles (prefix mezzi_srl)
-             try {
-                const resSRLMezzi = await fetch('src/data/mezzi_srl.json');
-                // Controlla se la risposta è OK prima di elaborare il JSON
-                if (!resSRLMezzi.ok) {
-                    console.warn(`File mezzi_srl.json non trovato (${resSRLMezzi.status}). Mezzi SRL non caricati.`);
-                    return; // Esce dalla funzione try senza generare errore JSON
-                }
-                let srlMezzi = await resSRLMezzi.json();
-                if (!Array.isArray(srlMezzi)) {
-                    const arr = Object.values(srlMezzi).find(v => Array.isArray(v));
-                    srlMezzi = arr || [];
-                }
-                srlMezzi.forEach(item => {
-                    const nomePost = (item['Nome Postazione'] || '').trim();
-                    if (!nomePost) return;
-                    const coords = item['Coordinate Postazione']?.split(',').map(s => Number(s.trim())) || [];
-                    const lat = coords[0], lon = coords[1];
-                    if (lat == null || lon == null) return;
-                    const mezzo = {
-                        nome_radio: `(SRL) ${(item['Nome radio'] || '').trim()}`,
-                        postazione: nomePost,
-                        tipo_mezzo: item['Mezzo'] || '',
-                        convenzione: item['Convenzione'] || '',
-                        Giorni: item['Giorni'] || item['giorni'] || "LUN-DOM",
-                        'Orario di lavoro': item['Orario di lavoro'] || '',
-                        lat, lon, stato: 1, _marker: null, _callMarker: null, _ospedaleMarker: null
-                    };
-                    this.mezzi.push(mezzo);
-                    const key = nomePost + '_' + lat + '_' + lon;
-                    if (!this.postazioniMap[key]) {
-                        this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isSRL: true };
-                    }
-                    this.postazioniMap[key].mezzi.push(mezzo);
-                });
-            } catch(e) { console.error('Error loading mezzi_srl.json:', e); }
-
-            // Add SRP vehicles (prefix mezzi_srp)
-             try {
-                const resSRPMezzi = await fetch('src/data/mezzi_srp.json');
-                // Controlla se la risposta è OK prima di elaborare il JSON
-                if (!resSRPMezzi.ok) {
-                    console.warn(`File mezzi_srp.json non trovato (${resSRPMezzi.status}). Mezzi SRP non caricati.`);
-                    return; // Esce dalla funzione try senza generare errore JSON
-                }
-                let srpMezzi = await resSRPMezzi.json();
-                if (!Array.isArray(srpMezzi)) {
-                    const arr = Object.values(srpMezzi).find(v => Array.isArray(v));
-                    srpMezzi = arr || [];
-                }
-                srpMezzi.forEach(item => {
-                    const nomePost = (item['Nome Postazione'] || '').trim();
-                    if (!nomePost) return;
-                    const coords = item['Coordinate Postazione']?.split(',').map(s => Number(s.trim())) || [];
-                    const lat = coords[0], lon = coords[1];
-                    if (lat == null || lon == null) return;
-                    const mezzo = {
-                        nome_radio: `(SRP) ${(item['Nome radio'] || '').trim()}`,
-                        postazione: nomePost,
-                        tipo_mezzo: item['Mezzo'] || '',
-                        convenzione: item['Convenzione'] || '',
-                        Giorni: item['Giorni'] || item['giorni'] || "LUN-DOM",
-                        'Orario di lavoro': item['Orario di lavoro'] || '',
-                        lat, lon, stato: 1, _marker: null, _callMarker: null, _ospedaleMarker: null
-                    };
-                    this.mezzi.push(mezzo);
-                    const key = nomePost + '_' + lat + '_' + lon;
-                    if (!this.postazioniMap[key]) {
-                        this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isSRP: true };
-                    }
-                    this.postazioniMap[key].mezzi.push(mezzo);
-                });
-            } catch(e) { console.error('Error loading mezzi_srp.json:', e); }
-
-            aggiornaDisponibilitaMezzi();
-            this.updatePostazioneMarkers();
-            this.updateMezzoMarkers();
-            this.updateActiveMissionMezzi();
-
-            if (this.ui && typeof this.ui.updateStatoMezzi === 'function') {
-                this.ui.updateStatoMezzi();
+            // Additional extra SOREU vehicles per central
+            // SRA: load SRL then SRP
+            if (window.selectedCentral === 'SRA') {
+                // SRL
+                try {
+                    const res = await fetch('src/data/Mezzi_SRL.json');
+                    let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
+                    arr.forEach(item => {
+                        const nomePost = (item['Nome Postazione']||'').trim(); if (!nomePost) return;
+                        const [lat, lon] = (item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if (lat==null||lon==null) return;
+                        const mezzo = { nome_radio: `(SRL) ${(item['Nome radio']||'').trim()}`, postazione: nomePost, tipo_mezzo: item['Mezzo']||'', convenzione: item['Convenzione']||'', Giorni: item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro': item['Orario di lavoro']||'', lat, lon, stato:1 }; 
+                        this.mezzi.push(mezzo); const key = `${nomePost}_${lat}_${lon}`;
+                        if (!this.postazioniMap[key]) this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isSRL:true };
+                        this.postazioniMap[key].mezzi.push(mezzo);
+                    });
+                } catch(e){console.error(e)}                // SRP
+                try {
+                    const res = await fetch('src/data/mezzi_srp.json');
+                    let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
+                    arr.forEach(item => {
+                        const nomePost = (item['Nome Postazione']||'').trim(); if (!nomePost) return;
+                        const [lat, lon] = (item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if (lat==null||lon==null) return;
+                        const mezzo = { nome_radio: `(SRP) ${(item['Nome radio']||'').trim()}`, postazione: nomePost, tipo_mezzo: item['Mezzo']||'', convenzione: item['Convenzione']||'', Giorni: item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro': item['Orario di lavoro']||'', lat, lon, stato:1 };
+                        this.mezzi.push(mezzo); const key = `${nomePost}_${lat}_${lon}`;
+                        if (!this.postazioniMap[key]) this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isSRP:true };
+                        this.postazioniMap[key].mezzi.push(mezzo);
+                    });
+                } catch(e){console.error(e)}
             }
-        } catch (e) {
-            console.error("Errore nel caricamento dei mezzi:", e);
+            // SRL: load SRA, SRP
+            if (window.selectedCentral === 'SRL') {
+                for (const [file,prefix,flag] of [                    ['src/data/mezzi_sra.json','SRA','isSRL'],
+                    ['src/data/mezzi_srp.json','SRP','isSRL']
+                ]) {
+                    try {
+                        const res = await fetch(file);
+                        let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
+                        arr.forEach(item=>{
+                            const nomePost=(item['Nome Postazione']||'').trim(); if(!nomePost)return;
+                            const [lat,lon]=(item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if(lat==null||lon==null)return;
+                            const mezzo={ nome_radio:`(${prefix}) ${(item['Nome radio']||'').trim()}`, postazione:nomePost, tipo_mezzo:item['Mezzo']||'', convenzione:item['Convenzione']||'', Giorni:item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro':item['Orario di lavoro']||'', lat, lon, stato:1 };
+                            this.mezzi.push(mezzo); const key=`${nomePost}_${lat}_${lon}`;
+                            if(!this.postazioniMap[key]) this.postazioniMap[key]={ nome:nomePost, lat, lon, mezzi:[], isSRL:true };
+                            this.postazioniMap[key].mezzi.push(mezzo);
+                        });
+                    } catch(e){console.error(e)}
+                }
+            }
+            // SRM: load SRA, SRL, SRP
+            if (window.selectedCentral === 'SRM') {
+                for (const [file,prefix,flag] of [                    ['src/data/mezzi_sra.json','SRA','isSRM'],
+                    ['src/data/Mezzi_SRL.json','SRL','isSRL'],
+                    ['src/data/mezzi_srp.json','SRP','isSRP']
+                ]) {
+                    try {
+                        const res = await fetch(file);
+                        let arr = await res.json();
+                        if (!Array.isArray(arr)) arr = Object.values(arr).find(v => Array.isArray(v)) || [];
+                        arr.forEach(item => {
+                            const nomePost = (item['Nome Postazione'] || '').trim();
+                            if (!nomePost) return;
+                            const [lat, lon] = (item['Coordinate Postazione'] || '').split(',').map(s => Number(s.trim()));
+                            if (lat == null || lon == null) return;
+                            const mezzo = {
+                                nome_radio: `(${prefix}) ${(item['Nome radio'] || '').trim()}`,
+                                postazione: nomePost,
+                                tipo_mezzo: item['Mezzo'] || '',
+                                convenzione: item['Convenzione'] || '',
+                                Giorni: item['Giorni'] || item['giorni'] || 'LUN-DOM',
+                                'Orario di lavoro': item['Orario di lavoro'] || '',
+                                lat, lon, stato: 1
+                            };
+                            this.mezzi.push(mezzo);
+                            const key = `${nomePost}_${lat}_${lon}`;
+                            if (!this.postazioniMap[key]) this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], [flag]: true };
+                            this.postazioniMap[key].mezzi.push(mezzo);
+                        });
+                    } catch(e) { console.error(e); }
+                }
+            }
+            // SRP: load SRA, SRM, SRL
+            if (window.selectedCentral === 'SRP') {
+                for (const [file,prefix,flag] of [
+                    ['src/data/mezzi_sra.json','SRA','isSRP'],
+                    ['src/data/mezzi_srm.json','SRM','isSRP'],
+                    ['src/data/Mezzi_SRL.json','SRL','isSRP']
+                ]) {
+                    try {
+                        const res = await fetch(file);
+                        let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
+                        arr.forEach(item=>{
+                            const nomePost=(item['Nome Postazione']||'').trim(); if(!nomePost)return;
+                            const [lat,lon]=(item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if(lat==null||lon==null)return;
+                            const mezzo={ nome_radio:`(${prefix}) ${(item['Nome radio']||'').trim()}`, postazione:nomePost, tipo_mezzo:item['Mezzo']||'', convenzione:item['Convenzione']||'', Giorni:item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro':item['Orario di lavoro']||'', lat, lon, stato:1 };
+                            this.mezzi.push(mezzo); const key=`${nomePost}_${lat}_${lon}`;
+                            if(!this.postazioniMap[key]) this.postazioniMap[key]={ nome:nomePost, lat, lon, mezzi:[], [flag]:true };
+                            this.postazioniMap[key].mezzi.push(mezzo);
+                        });
+                    } catch(e){console.error(e)}
+                }
+            }
+
+            // ...existing code continue
+        } catch(e) {
+            console.error("Errore nel caricamento dei mezzi:",e);
         }
     }
 
     async loadHospitals() {
         try {
-            const response = await fetch('src/data/ospedali.json');
+           // SRA central: mostra ospedali SRA, Laghi, Metro e Pianura in ordine
+           if (window.selectedCentral === 'SRA') {
+               let hospitalsAll = [];
+               // 1) ospedali.json (prefisso SRA)
+               const resBase = await fetch('src/data/ospedali.json');
+               const baseList = await resBase.json();
+               (Array.isArray(baseList)? baseList : Object.values(baseList).find(v=>Array.isArray(v))||[])
+               .forEach(h => {
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRA) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 2) PS SOREU Laghi (prefisso SRL)
+               const resLaghi = await fetch('src/data/PS SOREU laghi.json');
+               const laghiList = await resLaghi.json();
+               (Array.isArray(laghiList)? laghiList : []).forEach(h=>{
+                   const coords=(h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat=coords[0], lon=coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRL) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 3) PS SOREU Metro (prefisso SRM)
+               const resMetro = await fetch('src/data/PS SOREU Metro.json');
+               const metroList = await resMetro.json();
+               (Array.isArray(metroList)? metroList : []).forEach(h=>{
+                   const coords=(h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat=coords[0], lon=coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRM) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 4) PS SOREU Pianura (prefisso SRP)
+               const resPianura = await fetch('src/data/PS SOREU pianura.json');
+               const pianuraList = await resPianura.json();
+               (Array.isArray(pianuraList)? pianuraList : []).forEach(h=>{
+                   const coords=(h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat=coords[0], lon=coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRP) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // render markers
+               this.hospitals = hospitalsAll;
+               hospitalsAll.forEach(hosp=>{
+                   const marker = L.marker([hosp.lat, hosp.lon], { icon: this.getHospitalIcon() })
+                       .addTo(this.map)
+                       .bindPopup(`<b>${hosp.nome}</b><br>${hosp.indirizzo||''}`);
+                   hosp._marker = marker;
+               });
+               return;
+           }
+           // SRL central: mostra ospedali Laghi, SRA, Metro e Pianura in ordine
+           if (window.selectedCentral === 'SRL') {
+               let hospitalsAll = [];
+               // 1) PS SOREU Laghi (appare prima)
+               const resLaghi = await fetch('src/data/PS SOREU laghi.json');
+               const laghiList = await resLaghi.json();
+               (Array.isArray(laghiList)? laghiList : []).forEach(h=>{
+                   const coords=(h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat=coords[0], lon=coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: h.OSPEDALE?.trim()||'', lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 2) ospedali.json (prefisso SRA)
+               const resBase = await fetch('src/data/ospedali.json');
+               const baseList = await resBase.json();
+               (Array.isArray(baseList)? baseList : Object.values(baseList).find(v=>Array.isArray(v))||[])
+               .forEach(h => {
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRA) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 3) PS SOREU Metro (prefisso SRM)
+               const resMetro = await fetch('src/data/PS SOREU Metro.json');
+               const metroList = await resMetro.json();
+               (Array.isArray(metroList)? metroList : []).forEach(h=>{
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRM) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 4) PS SOREU Pianura (prefisso SRP)
+               const resPianura = await fetch('src/data/PS SOREU pianura.json');
+               const pianuraList = await resPianura.json();
+               (Array.isArray(pianuraList)? pianuraList : []).forEach(h=>{
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRP) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // render markers
+               this.hospitals = hospitalsAll;
+               hospitalsAll.forEach(hosp=>{
+                   const marker = L.marker([hosp.lat, hosp.lon], { icon: this.getHospitalIcon() })
+                       .addTo(this.map)
+                       .bindPopup(`<b>${hosp.nome}</b><br>${hosp.indirizzo||''}`);
+                   hosp._marker = marker;
+               });
+               return;
+           }
+           // SRM central: mostra ospedali Metro, Laghi (SRL), Pianura (SRP), SRA in ordine
+           if (window.selectedCentral === 'SRM') {
+               let hospitalsAll = [];
+               // 1) PS SOREU Metro
+               const resMetro = await fetch('src/data/PS SOREU Metro.json');
+               const metroList = await resMetro.json();
+               (Array.isArray(metroList)? metroList : [])
+               .forEach(h=>{
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: h.OSPEDALE?.trim()||'', lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 2) PS SOREU Laghi (prefisso SRL)
+               const resLaghi = await fetch('src/data/PS SOREU laghi.json');
+               const laghiList = await resLaghi.json();
+               (Array.isArray(laghiList)? laghiList : []).forEach(h=>{
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRL) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 3) PS SOREU Pianura (prefisso SRP)
+               const resPianura = await fetch('src/data/PS SOREU pianura.json');
+               const pianuraList = await resPianura.json();
+               (Array.isArray(pianuraList)? pianuraList : []).forEach(h=>{
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRP) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 4) ospedali.json (prefisso SRA)
+               const resBase = await fetch('src/data/ospedali.json');
+               const baseList = await resBase.json();
+               (Array.isArray(baseList)? baseList : Object.values(baseList).find(v=>Array.isArray(v))||[])
+               .forEach(h=>{
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRA) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // render
+               this.hospitals = hospitalsAll;
+               hospitalsAll.forEach(hosp=>{
+                   const marker = L.marker([hosp.lat,hosp.lon],{icon:this.getHospitalIcon()})
+                       .addTo(this.map)
+                       .bindPopup(`<b>${hosp.nome}</b><br>${hosp.indirizzo||''}`);
+                   hosp._marker=marker;
+               });
+               return;
+           }
+           // SRP central: mostra ospedali PS Pianura, Laghi (SRL), Metro (SRM) e SRA
+           if (window.selectedCentral === 'SRP') {
+               let hospitalsAll = [];
+               // 1) PS SOREU Pianura (appare prima)
+               const resPianura = await fetch('src/data/PS SOREU pianura.json');
+               const pianuraList = await resPianura.json();
+               (Array.isArray(pianuraList) ? pianuraList : []).forEach(h => {
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if (lat!=null && lon!=null) hospitalsAll.push({ nome: h.OSPEDALE?.trim()||'', lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 2) PS SOREU Laghi (prefisso SRL)
+               const resLaghi = await fetch('src/data/PS SOREU laghi.json');
+               const laghiList = await resLaghi.json();
+               (Array.isArray(laghiList) ? laghiList : []).forEach(h => {
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if (lat!=null && lon!=null) hospitalsAll.push({ nome: `(SRL) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 3) PS SOREU Metro (prefisso SRM)
+               const resMetro = await fetch('src/data/PS SOREU Metro.json');
+               const metroList = await resMetro.json();
+               (Array.isArray(metroList) ? metroList : []).forEach(h => {
+                   const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                   const lat = coords[0], lon = coords[1];
+                   if (lat!=null && lon!=null) hospitalsAll.push({ nome: `(SRM) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+               });
+               // 4) ospedali.json (prefisso SRA)
+               const resBase = await fetch('src/data/ospedali.json');
+               const baseList = await resBase.json();
+               (Array.isArray(baseList) ? baseList : Object.values(baseList).find(v=>Array.isArray(v))||[])
+                   .forEach(h => {
+                       const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                       const lat = coords[0], lon = coords[1];
+                       if (lat!=null && lon!=null) hospitalsAll.push({ nome: `(SRA) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+                   });
+               // render markers
+               this.hospitals = hospitalsAll;
+               hospitalsAll.forEach(hosp => {
+                   const marker = L.marker([hosp.lat, hosp.lon], { icon: this.getHospitalIcon() })
+                       .addTo(this.map)
+                       .bindPopup(`<b>${hosp.nome}</b><br>${hosp.indirizzo||''}`);
+                   hosp._marker = marker;
+               });
+               return;
+           }
+           // Carica ospedali da ospedali.json (fallback per centrali non riconosciute)
+           const response = await fetch('src/data/ospedali.json');
             let hospitals = await response.json();
 
             hospitals = hospitals.map(hosp => {
@@ -819,7 +1072,7 @@ class EmergencyDispatchGame {
             try {
                 const resSRM = await fetch('src/data/PS SOREU Metro.json');
                 let srmList = await resSRM.json();
-                (Array.isArray(srmList) ? srmList : []).forEach(h => {
+                (Array.isArray(srmList) ? srlList : []).forEach(h => {
                     const coords = (h.COORDINATE||'').split(',').map(s => Number(s.trim()));
                     const lat = coords[0], lon = coords[1];
                     if (lat != null && lon != null) hospitals.push({ nome: `(SRM) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: '', raw: h });
@@ -923,8 +1176,8 @@ class EmergencyDispatchGame {
                 mezziHtml = `<div style="color:#d32f2f;"><i>Nessun mezzo</i></div>`;
             }
             
-            // SRL and SRP postazioni should use white background: detect flags
-            const isSpecial = postazione.isCreli || postazione.isSRL || postazione.isSRP;
+            // SRL, SRP, SRM postazioni should use white background: detect flags
+            const isSpecial = postazione.isCreli || postazione.isSRL || postazione.isSRP || postazione.isSRM;
             const marker = L.marker([postazione.lat, postazione.lon], { 
                 icon: this.getPostazioneIcon(hasLiberi, isSpecial) 
             }).addTo(this.map)
@@ -1093,14 +1346,15 @@ class EmergencyDispatchGame {
         // Sostituisci ogni placeholder con l'indirizzo selezionato
         testo_chiamata = (testo_chiamata || '').replace(/\(indirizzo [^)]+\)/gi, indirizzo.indirizzo);
          
-        // Randomly select case type (stabile/poco_stabile/critico)
+        // Randomly select case type (stabile/poco stabile/critico)
+
         const caseTypes = ['caso_stabile', 'caso_poco_stabile', 'caso_critico'];
-        const weights = [0.5, 0.3, 0.2]; // 50% stable, 30% less stable, 20% critical
+        const weights = [0.5, 0.3, 0.2]; // 50% stable,  30% less stable, 20% critical
         let selectedCase = null;
 
         const rand = Math.random();
         let sum = 0;
-        for (let i = 0; i < weights.length; i++) {
+               for (let i = 0; i < weights.length; i++) {
             sum += weights[i];
             if (rand < sum) {
                 selectedCase = caseTypes[i];
@@ -1109,18 +1363,24 @@ class EmergencyDispatchGame {
         }
 
         const patologie = ['Trauma', 'Malore', 'Incidente', 'Dolore toracico', 'Dispnea', 'Altro'];
-        const codici = ['Rosso', 'Giallo', 'Verde'];
+
         const patologia = patologie[Math.floor(Math.random() * patologie.length)];
+        // ensure codice list from loaded statiMezzi
+        const codici = this.statiMezzi ? Object.keys(this.statiMezzi) : ['Rosso','Giallo','Verde'];
         const codice = codici[Math.floor(Math.random() * codici.length)];
 
         const now = new Date();
         const year = now.getFullYear();
-        const decina = Math.floor(year % 100 / 10);
+        const decina = Math.floor((year % 100) / 10);
         const unita = year % 10;
-        if (!window._missioneProgressivo) window._missioneProgressivo = 0;
-        window._missioneProgressivo++;
-        const progressivo = window._missioneProgressivo.toString().padStart(6, '0');
-        const missioneId = `${decina}${unita}1${progressivo}`;
+        // per-central mission numbering: SRA=1, SRL=3, SRM=5, SRP=7
+        const central = window.selectedCentral || 'SRA';
+        const codeMap = { SRA: 1, SRL: 3, SRM: 5, SRP: 7 };
+        const code = codeMap[central] || 1;
+        // incrementa contatore progressivo per central
+        this.missionCounter[central] = (this.missionCounter[central] || 0) + 1;
+        const progressivo = this.missionCounter[central].toString().padStart(6, '0');
+        const missioneId = `${decina}${unita}${code}${progressivo}`;
         const id = 'C' + Date.now() + Math.floor(Math.random()*1000);
         const call = {
             id,
@@ -1178,7 +1438,7 @@ class EmergencyDispatchGame {
 
         // Funzione per aggiornare la tabella dei mezzi nel popup missione
         this.updateMissionPopupTable = function(call) {
-            const mezziFiltrati = this.mezzi.filter(m => [1,2,6,7].includes(m.stato) || (call.mezziAssegnati||[]).includes(m.nome_radio));
+            const mezziFiltrati = this.mezzi.filter(m => [1,2,7].includes(m.stato));
             let html = `<table class='stato-mezzi-table' style='width:100%;margin-bottom:0;'>
                 <thead><tr>
                     <th style='width:40%;text-align:left; padding:1px 2px;'>Nome</th>
@@ -1221,6 +1481,7 @@ class EmergencyDispatchGame {
             if (mezziAssegnatiDiv) {
                 mezziAssegnatiDiv.addEventListener('change', function(e) {
                     if (e.target.type === 'checkbox' && e.target.name === 'mezzi') {
+
                         const mezzoId = e.target.value;
                         const mezzo = window.mezzi.find(m => m.nome_radio === mezzoId);
                         
@@ -1319,7 +1580,7 @@ class EmergencyDispatchGame {
             {tipo:'ELI', label:'ELI'}
         ];
         const btnsRapidiDiv = document.getElementById('btnsRapidiMezzi');
-        if (btnsRapidiDiv) {
+               if (btnsRapidiDiv) {
             btnsRapidiDiv.innerHTML = btnsRapidi.map(b =>
                 `<button type='button' class='btn-rapido-mezzo' data-tipo='${b.tipo}' style='font-size:15px;padding:2px 10px 2px 10px;border-radius:4px;background:#1976d2;color:#fff;border:none;line-height:1.2;min-width:44px;'>${b.label}</button>`
             ).join('');
@@ -1418,7 +1679,7 @@ class EmergencyDispatchGame {
         // Identifica i nuovi mezzi aggiunti (non ancora presenti tra quelli assegnati)
         const aggiunti = mezziChecked.filter(id => !prev.includes(id));
         
-        // Aggiorna la lista dei mezzi assegnati con i veicoli selezionati
+        // Aggiorna la lista dei mezzi assegnati con i veicoli selezionti
         call.mezziAssegnati = mezziChecked;
         // Aggiorna immediatamente il pannello missione in corso per riflettere le rimozioni
         if (window.game.ui && typeof window.game.ui.updateMissioneInCorso === 'function') {
