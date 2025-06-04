@@ -618,7 +618,7 @@
       }
     },
   "chiamata_37": {
-    "testo_chiamata": "Salve, chiamo da (RSA/ indirizzo abitazione) . Una signora di 82 anni ha diarrea da due giorni e ora è molto debole e confusa.",
+    "testo_chiamata": "Salve, chiamo da (indirizzo abitazione). Una signora di 82 anni ha diarrea da due giorni e ora è molto debole e confusa.",
     "caso_stabile": {
       "MSB": "Femmina, 82 anni, vigile ma confusa, riferita diarrea da 2 giorni, PA 130/75 mmHg, FC 88 bpm, SpO₂ 97%, nessun segno di disidratazione severa. [PS]",
       "MSA1": "Femmina, 82 anni, GCS 14, riferita diarrea da 2 giorni, PA 130/75 mmHg, FC 88 bpm, SpO₂ 97%, nessun segno di disidratazione severa. In corso Ringer EV. [PS]",
@@ -654,7 +654,7 @@
     }
   },
   "chiamata_39": {
-    "testo_chiamata": "Pronto, chiamo da ( indirizzo abitazione) il mio vicino di circa 70 anni ha forti dolori al petto, dice che è iniziato improvvisamente e ha difficoltà a respirare.",
+    "testo_chiamata": "Pronto, chiamo da (indirizzo abitazione) il mio vicino di circa 70 anni ha forti dolori al petto, dice che è iniziato improvvisamente e ha difficoltà a respirare.",
     "caso_stabile": {
       "MSB": "Maschio, 70 anni, vigile, dolore retrosternale non irradiato da circa 30 min, PA 135/85 mmHg, FC 88 bpm, SpO₂ 96%. Eseguito ECG, Pz iperteso e fumatore, nessuna patologia cardiaca nota. [PS]",
       "MSA1": "Maschio, 70 anni, vigile, dolore retrosternale non irradiato da circa 30 min, PA 135/85 mmHg, FC 88 bpm, SpO₂ 96%. Eseguito ECG, non significativo, Pz iperteso e fumatore, nessuna patologia cardiaca nota. [PS]",
