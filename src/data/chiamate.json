@@ -18,7 +18,11 @@
         }
     },
     "chiamata_2": {
+<<<<<<< HEAD
         "testo_chiamata": "Pronto? Chiamo da ( esercizio pubblico), c'è una signora anziana che ha perso conoscenza mentre era seduta. È scivolata dalla sedia e ora non risponde. Respira, ma è molto pallida e sudata. Potete mandare qualcuno subito?",
+=======
+        "testo_chiamata": "Pronto? Chiamo da (indirizzo esercizio pubblico), c'è una signora anziana che ha perso conoscenza mentre era seduta. È scivolata dalla sedia e ora non risponde. Respira, ma è molto pallida e sudata. Potete mandare qualcuno subito?",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         "caso_stabile": {
             "MSB": "Femmina, circa 75 anni, trovata cosciente all’arrivo, riferita perdita di coscienza transitoria . Parametri vitali nella norma: FC 72 bpm, PA 125/75 mmHg, SpO₂ 99%. Nessun trauma apparente. Nessuna patologia riferita. [PS]",
             "MSA1": "Femmina, 75 anni, vigile all’arrivo, riferito episodio pre sincopale. Parametri stabili: FC 74 bpm, PA 130/80 mmHg, SpO₂ 98%, GCS 15. Nessuna lesione visibile, verosimile episodio lipotimico. [PS]",
@@ -616,6 +620,7 @@
         "MSA1": "Maschio, 35 anni, sveglio, addome teso, PA 85/60 mmHg, FC 128 bpm, SpO₂ 94%, Tc 39.8°c . riferisce dolore importante a tutto l'addome, nessuna patologia nota, sospetta peritonite, in corso ringer 500ml EV. [DEA]",
         "MSA2": "Maschio, 35 anni, sveglio, addome teso, PA 85/60 mmHg, FC 128 bpm, SpO₂ 94%, Tc 39.8°c . riferisce dolore importante a tutto l'addome, nessuna patologia nota, sospetta peritonite, in corso ringer 500ml EV. [DEA]"
       }
+<<<<<<< HEAD
     },
   "chiamata_37": {
     "testo_chiamata": "Salve, chiamo da (indirizzo abitazione). Una signora di 82 anni ha diarrea da due giorni e ora è molto debole e confusa.",
@@ -726,3 +731,7 @@
       }
     }
   }
+=======
+    }
+}
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4

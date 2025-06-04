@@ -192,7 +192,11 @@
     "Nome Postazione": "Croce Rossa Italiana - Milano",
     "Coordinate Postazione": "45.4783672,9.1662849",
     "Mezzo": "MSB",
+<<<<<<< HEAD
     "Nome radio": "CRI_MI_345",
+=======
+    "Nome radio": "CRI_MI_345 ",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     "Convenzione": "GET",
     "Orario di lavoro": "FASCIA NOTTURNA",
     "Giorni": "LUN-DOM"
@@ -203,7 +207,11 @@
     "Mezzo": "MSB",
     "Nome radio": "CRI_MI_346",
     "Convenzione": "GET",
+<<<<<<< HEAD
     "Orario di lavoro": "FASCIA DIURNA",
+=======
+    "Orario di lavoro": "RANDOM",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     "Giorni": "LUN-DOM"
   },
   {
@@ -993,7 +1001,11 @@
     "Nome Postazione": "Stazionamento Missori",
     "Coordinate Postazione": "45.460433,9.18842",
     "Mezzo": "MSB",
+<<<<<<< HEAD
     "Nome radio": "BIC_MI_110.00H2",
+=======
+    "Nome radio": "MI_110.00H2",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     "Convenzione": "H12",
     "Orario di lavoro": "8:30-20:30",
     "Giorni": "LUN-DOM"

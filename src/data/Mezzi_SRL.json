@@ -318,10 +318,17 @@
     "Nome Postazione": "Croce Rossa Italiana - Ballabio",
     "Coordinate Postazione": "45.920654,9.4391789",
     "Mezzo": "MSB",
+<<<<<<< HEAD
     "Nome radio": "CRIBAL_184.02A1",
     "Convenzione": "H24",
     "Orario di lavoro": "20:00-8:00",
     "Giorni": "LUN-DOM"
+=======
+    "Nome radio": "CRIBAL_184.02A1 ",
+    "Convenzione": "H24",
+    "Orario di lavoro": "20:00-8:00",
+    "Giorni": "SAB-DOM"
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
   },
   {
     "Nome Postazione": "Croce Rossa Italiana - Brugherio",
@@ -444,7 +451,11 @@
     "Nome Postazione": "Croce Rossa Italiana - Galbiate",
     "Coordinate Postazione": "45.8164625,9.3776936",
     "Mezzo": "MSB",
+<<<<<<< HEAD
     "Nome radio": "CRIGLB+399",
+=======
+    "Nome radio": "CRIGLB+399 ",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     "Convenzione": "GET",
     "Orario di lavoro": "FASCIA NOTTURNA, FASCIA DIURNA SAB E DOM",
     "Giorni": "LUN-DOM"
@@ -453,7 +464,11 @@
     "Nome Postazione": "Croce Rossa Italiana - Gallarate",
     "Coordinate Postazione": "45.6675037,8.8037716",
     "Mezzo": "MSB",
+<<<<<<< HEAD
     "Nome radio": "CRIGAL_136.05B1",
+=======
+    "Nome radio": "CRIGAL_136.05B1 ",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     "Convenzione": "H24",
     "Orario di lavoro": "00:00-00:00",
     "Giorni": "LUN-DOM"
@@ -662,8 +677,13 @@
     "Mezzo": "MSB",
     "Nome radio": "CRIOLG+303",
     "Convenzione": "GET",
+<<<<<<< HEAD
     "Orario di lavoro": "FASCIA SERALE",
     "Giorni": "LUN-DOM"
+=======
+    "Orario di lavoro": "RANDOM",
+    "Giorni": "RANDOM"
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
   },
   {
     "Nome Postazione": "Croce Rossa Italiana - Premana",
@@ -750,10 +770,17 @@
     "Nome Postazione": "Croce Rossa Italiana - Valmadrera",
     "Coordinate Postazione": "45.8469095,9.3602592",
     "Mezzo": "MSB",
+<<<<<<< HEAD
     "Nome radio": "CRIVMD_327",
     "Convenzione": "GET",
     "Orario di lavoro": "FASCIA SERALE",
     "Giorni": "LUN-DOM"
+=======
+    "Nome radio": "CRIVMD_327 ",
+    "Convenzione": "GET",
+    "Orario di lavoro": "RANDOM",
+    "Giorni": "RANDOM"
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
   },
   {
     "Nome Postazione": "Croce Rossa Italiana - Varedo",
@@ -828,7 +855,11 @@
     "Giorni": "LUN-DOM"
   },
   {
+<<<<<<< HEAD
     "Nome Postazione": "Soccorso Centro Valsassina",
+=======
+    "Nome Postazione": "Soccorso Centro Valsassina ",
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     "Coordinate Postazione": "45.9773224,9.446444",
     "Mezzo": "MSB",
     "Nome radio": "SOCINT_174.02A1",

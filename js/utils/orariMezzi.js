@@ -7,35 +7,10 @@
  * @returns {boolean} - true se il mezzo è operativo, false altrimenti
  */
 function isMezzoOperativo(mezzo, orarioSimulato, dataSimulata = new Date(), giornoSimulato = null) {
-<<<<<<< HEAD
-    // Verifica che il mezzo sia valido
-    if (!mezzo) {
-        console.error('[ERROR] isMezzoOperativo chiamato con mezzo non valido');
-        return false;
-    }
-
-    // Gestione mezzo H24: attivo in tutti i giorni/orari
-    if (mezzo.convenzione && mezzo.convenzione.toUpperCase() === 'H24') {
-        // Verifica anche che abbia effettivamente un orario H24 o nessun orario
-        if (!mezzo["Orario di lavoro"] || mezzo["Orario di lavoro"].match(/^(00:00\s*-\s*00:00|dalle\s*00:00\s*alle\s*00:00)$/i)) {
-            return true;
-        }
-    }
-    
-=======
->>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     // Mappa giorni abbreviati <-> italiano
     const giorniSettimanaIT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
     const giorniSettimanaEN = ['LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB', 'DOM'];
 
-<<<<<<< HEAD
-    // Log for debugging at problematic times
-    if (orarioSimulato === '00:00' || orarioSimulato === '16:11') {
-        console.log(`[DEBUG] isMezzoOperativo check for ${mezzo.nome_radio} at ${orarioSimulato} with service hours: ${mezzo["Orario di lavoro"] || "not specified"}`);
-    }
-
-=======
->>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     // Determina il giorno attuale
     let giornoCorrente;
     if (giornoSimulato) {
@@ -94,17 +69,7 @@ function isMezzoOperativo(mezzo, orarioSimulato, dataSimulata = new Date(), gior
         return true;
     }
 
-<<<<<<< HEAD
-    // LOG DIAGNOSTICO AVANZATO
-    // Logga sempre i dettagli per i mezzi con orari "notturni" o che non risultano operativi
     const orarioLavoro = mezzo["Orario di lavoro"] || "";
-    if (orarioLavoro.match(/(22:00|20:00|19:00|06:00|08:00|07:00)/) || !giornoOK) {
-        console.log(`[DEBUG-AVANZATO] Mezzo: ${mezzo.nome_radio}, Orario di lavoro: '${orarioLavoro}', Giorni: '${mezzo.Giorni}', Giorno corrente: ${giornoCorrente}, MinutoGiorno: ${minutoGiorno}, OrarioSimulato: ${orarioSimulato}, giornoOK: ${giornoOK}`);
-    }
-
-=======
-    const orarioLavoro = mezzo["Orario di lavoro"] || "";
->>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     let orarioMatch = orarioLavoro.match(/(?:dalle|Dalle)\s*(\d{1,2}):(\d{2})\s*alle\s*(\d{1,2}):(\d{2})/);
     if (orarioMatch) {
         const inizio = parseInt(orarioMatch[1], 10) * 60 + parseInt(orarioMatch[2], 10);
@@ -124,36 +89,10 @@ function isMezzoOperativo(mezzo, orarioSimulato, dataSimulata = new Date(), gior
         const [h2, m2] = endStr.split(':').map(Number);
         const inizio2 = h1 * 60 + m1;
         const fine2 = h2 * 60 + m2;
-<<<<<<< HEAD
-        
-        // Special case for midnight: both 00:00-00:00 and 24:00-24:00 indicate H24
-        if ((h1 === 0 && m1 === 0 && h2 === 0 && m2 === 0) || 
-            (h1 === 24 && m1 === 0 && h2 === 24 && m2 === 0)) {
-            console.log(`[DEBUG] H24 pattern detected for ${mezzo.nome_radio}: ${orarioLavoro}`);
-            return true;
-        }
-        
-        // Normal time interval checks
-        if (inizio2 < fine2) {
-            // Normal interval (e.g. 08:00-20:00)
-            return minutoGiorno >= inizio2 && minutoGiorno < fine2;
-        }
-        
-        // Overnight interval (e.g. 20:00-08:00)
-        const isOperative = minutoGiorno >= inizio2 || minutoGiorno < fine2;
-        
-        // Extra logging for midnight
-        if (orarioSimulato === '00:00') {
-            console.log(`[DEBUG] Midnight check for ${mezzo.nome_radio}: interval ${startStr}-${endStr}, minuteOfDay=${minutoGiorno}, result=${isOperative}`);
-        }
-        
-        return isOperative;
-=======
         if (inizio2 < fine2) {
             return minutoGiorno >= inizio2 && minutoGiorno < fine2;
         }
         return minutoGiorno >= inizio2 || minutoGiorno < fine2;
->>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     }
 
     // Orari tipo "dalle 00:00 alle 00:00" (H24)
@@ -175,24 +114,6 @@ function isMezzoOperativo(mezzo, orarioSimulato, dataSimulata = new Date(), gior
         NOTTURNA: { inizio: 19 * 60, fine: 9 * 60 } // 19:00-9:00 più flessibile
     };
 
-<<<<<<< HEAD
-    // Introduce flat handling for any 'fascia oraria' before GET-specific logic
-    const orarioStringAll = orarioLavoro.toUpperCase();
-    if (orarioStringAll.includes('FASCIA DIURNA') || orarioStringAll.includes('FASCIA SERALE') || orarioStringAll.includes('FASCIA NOTTURNA')) {
-        // Use standard FASCE_ORARIE for non-GET vehicles
-        if (orarioStringAll.includes('FASCIA DIURNA')) {
-            return minutoGiorno >= FASCE_ORARIE.DIURNA.inizio && minutoGiorno < FASCE_ORARIE.DIURNA.fine;
-        }
-        if (orarioStringAll.includes('FASCIA SERALE')) {
-            return minutoGiorno >= FASCE_ORARIE.SERALE.inizio && minutoGiorno < FASCE_ORARIE.SERALE.fine;
-        }
-        if (orarioStringAll.includes('FASCIA NOTTURNA')) {
-            return minutoGiorno >= FASCE_ORARIE.NOTTURNA.inizio || minutoGiorno < FASCE_ORARIE.NOTTURNA.fine;
-        }
-    }
-
-=======
->>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
     // Gestione mezzi GETTONE (GET)
     if (mezzo.convenzione === 'GET') {
         const orarioString = orarioLavoro.toUpperCase();

@@ -23,6 +23,7 @@
   { "indirizzo abitazione": "Via Sacco, 21100 Varese VA", "lat": 45.817500, "lon": 8.827200 },
   { "indirizzo abitazione": "Corso Matteotti, 21100 Varese VA", "lat": 45.816400, "lon": 8.829100 },
   { "indirizzo abitazione": "Viale Aguggiari, 21100 Varese VA", "lat": 45.826200, "lon": 8.827300 },
+<<<<<<< HEAD
   { "indirizzo abitazione": "Via Manin, 21100 Varese VA", "lat": 45.815600, "lon": 8.822800 },
   { "indirizzo abitazione": "Piazza XX Settembre, 23900 Lecco LC", "lat": 45.856800, "lon": 9.390400 },
   { "indirizzo abitazione": "Via Nazario Sauro, 23807 Merate LC", "lat": 45.693000, "lon": 9.418800 },
@@ -128,3 +129,7 @@
   { "indirizzo abitazione": "Via Camillo Benso Cavour, 22070 Casnate con Bernate CO", "lat": 45.7830, "lon": 9.0830 },
   { "indirizzo abitazione": "Via Vittorio Veneto, 22070 Montano Lucino CO", "lat": 45.8000, "lon": 9.0500 }
 ]
+=======
+  { "indirizzo abitazione": "Via Manin, 21100 Varese VA", "lat": 45.815600, "lon": 8.822800 }
+]
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4

@@ -61,6 +61,7 @@ function simTick() {
         
         // Gestisci il rollover giorno e orario
         if (nextSec >= 24*3600) {
+<<<<<<< HEAD
             console.log('[DEBUG] Day rollover - Midnight transition detected');
             sec = 0; // Reset a mezzanotte
             dayIdx = (dayIdx + 1) % 7;
@@ -69,6 +70,11 @@ function simTick() {
             // Force availability update at midnight rollover
             window._forceAvailabilityUpdate = true;
             console.log('[DEBUG] Setting _forceAvailabilityUpdate=true due to midnight rollover');
+=======
+            sec = 0; // Reset a mezzanotte
+            dayIdx = (dayIdx + 1) % 7;
+            window.simDay = giorniSettimanaIT[dayIdx];
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         } else {
             sec = nextSec;
         }
@@ -356,7 +362,11 @@ function aggiornaMissioniPerMezzo(mezzo) {
 
 // --- AGGIORNA DISPONIBILITÀ MEZZI IN BASE ALLA CONVENZIONE/ORARIO ---
 function aggiornaDisponibilitaMezzi() {
+<<<<<<< HEAD
     const now = (typeof window.simTime === 'number')
+=======
+    const now = window.simTime
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         ? (() => { 
             const d = new Date(); 
             d.setHours(Math.floor(window.simTime/3600), Math.floor((window.simTime%3600)/60), 0, 0); 
@@ -368,6 +378,7 @@ function aggiornaDisponibilitaMezzi() {
 
     const ora = now.getHours();
     const minuti = now.getMinutes();
+<<<<<<< HEAD
     
     // Use simulated day if set, otherwise use real day
     const giorniIT = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
@@ -405,11 +416,31 @@ function aggiornaDisponibilitaMezzi() {
                 const orarioSimulato = ora.toString().padStart(2, '0') + ':' + minuti.toString().padStart(2, '0');
                 
                 // Get the isMezzoOperativo function
+=======
+    const giorno = now.getDay();
+
+    if (!window._lastAvailabilityCheck) {
+        window._lastAvailabilityCheck = { ora: -1, giorno: -1 };
+    }
+
+    const shouldUpdate = window._lastAvailabilityCheck.ora !== ora || 
+                         window._lastAvailabilityCheck.giorno !== giorno;
+
+    if (shouldUpdate) {
+        console.log(`[INFO] Aggiornamento disponibilità mezzi - Ora: ${ora}:${minuti.toString().padStart(2, '0')}, Giorno: ${['DOM','LUN','MAR','MER','GIO','VEN','SAB'][giorno]}`);
+
+        window.game.mezzi.forEach(m => {
+            if (!m.chiamata) {
+                // Usa solo la funzione isMezzoOperativo per determinare la disponibilità
+                const orarioSimulato = ora.toString().padStart(2, '0') + ':' + minuti.toString().padStart(2, '0');
+                // --- FIX: fallback se window.isMezzoOperativo non è ancora definita ---
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                 const isMezzoOperativoFn = window.isMezzoOperativo || (window.jsUtils && window.jsUtils.isMezzoOperativo);
                 if (typeof isMezzoOperativoFn !== "function") {
                     console.error("Funzione isMezzoOperativo non trovata su window. Assicurati che orariMezzi.js sia caricato PRIMA di game.js");
                     return;
                 }
+<<<<<<< HEAD
                 
                 // Determine availability based on the vehicle's service hours
                 const disponibile = isMezzoOperativoFn(m, orarioSimulato, now, window.simDay);
@@ -425,6 +456,13 @@ function aggiornaDisponibilitaMezzi() {
                 }
 
                 // Update vehicle state based on availability
+=======
+                // Debug availability: show time and simulated day
+                console.log(`[DEBUG] Checking availability of ${m.nome_radio} at ${orarioSimulato} on simulated day ${window.simDay}`);
+                // Pass simulated day to ensure correct day-of-week filtering
+                const disponibile = isMezzoOperativoFn(m, orarioSimulato, now, window.simDay);
+
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                 if (disponibile) {
                     if (m.stato === 8) {
                         console.log(`[INFO] Mezzo ${m.nome_radio || 'sconosciuto'} passa a disponibile (stato 1)`);
@@ -439,24 +477,55 @@ function aggiornaDisponibilitaMezzi() {
             }
         });
 
+<<<<<<< HEAD
         // Update markers and UI
         if (window.game.updatePostazioneMarkers) {
             window.game.updatePostazioneMarkers();
         }
+=======
+        if (window.game.updatePostazioneMarkers) {
+            window.game.updatePostazioneMarkers();
+        }
+        // Aggiorna anche la tabella Stato Mezzi
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         if (window.game.ui && typeof window.game.ui.updateStatoMezzi === 'function') {
             window.game.ui.updateStatoMezzi();
         }
 
+<<<<<<< HEAD
         // Store current time values to avoid unnecessary updates
         window._lastAvailabilityCheck.ora = ora;
         window._lastAvailabilityCheck.minuti = minuti;
         window._lastAvailabilityCheck.giorno = giorno;    }
+=======
+        window._lastAvailabilityCheck.ora = ora;
+        window._lastAvailabilityCheck.giorno = giorno;
+    }
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
 }
 
 class EmergencyDispatchGame {
     constructor() {
+<<<<<<< HEAD
         // Inizializza le proprietà base
         this.mezzi = [];
+=======
+        // Verifica che GameUI sia definito prima di creare l'istanza
+        if (typeof GameUI === 'undefined') {
+            console.error('GameUI non è definito. Assicurati che UI.js sia caricato prima di game.js');
+            // Crea un oggetto temporaneo per evitare errori
+            this.ui = {
+                updateMissioneInCorso: () => {},
+                updateStatoMezzi: () => {},
+                showNewCall: () => {},
+                moveCallToEventiInCorso: () => {},
+                closeMissioneInCorso: () => {}
+            };
+        } else {
+            this.ui = new GameUI(this);
+        }
+        
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         this.calls = new Map();
         this.hospitals = [];
         this.indirizziReali = window.indirizziReali || [];
@@ -472,6 +541,7 @@ class EmergencyDispatchGame {
 
         // Counters for mission numbers per SOREU central
         this.missionCounter = { SRA: 0, SRL: 0, SRM: 0, SRP: 0 };
+<<<<<<< HEAD
         
         // Verifica che GameUI sia definito prima di creare l'istanza
         if (typeof GameUI === 'undefined') {
@@ -487,6 +557,8 @@ class EmergencyDispatchGame {
         } else {
             this.ui = new GameUI(this);
         }
+=======
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
 
         simInterval(() => {
             aggiornaDisponibilitaMezzi();
@@ -591,6 +663,7 @@ class EmergencyDispatchGame {
     }
 
     async loadChiamate() {
+<<<<<<< HEAD
         // Carica il template delle chiamate provando prima src/data, poi data
         let text;
         try {
@@ -607,10 +680,31 @@ class EmergencyDispatchGame {
         text = text.replace(/^\s*\/\/.*$/gm, '');
         this.chiamateTemplate = JSON.parse(text);
     }    async initialize() {
+=======
+        try {
+            // Prova prima con il path minuscolo (compatibile GitHub Pages)
+            const response = await fetch('src/data/chiamate.json');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} loading chiamate.json`);
+            }
+            // Carica come testo per rimuovere eventuali commenti
+            let text = await response.text();
+            // Rimuovi righe commentate (// ...)
+            text = text.replace(/^\s*\/\/.*$/gm, '');
+            this.chiamateTemplate = JSON.parse(text);
+        } catch (e) {
+            console.error("Error loading chiamate:", e);
+            this.chiamateTemplate = null;
+        }
+    }
+
+    async initialize() {
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
          try {
              await this.loadChiamate();
              await this.loadStatiMezzi();
              await this.loadMezzi();
+<<<<<<< HEAD
              
              // Force availability update on initialization
              window._forceAvailabilityUpdate = true;
@@ -619,6 +713,8 @@ class EmergencyDispatchGame {
                  aggiornaDisponibilitaMezzi();
              }
              
+=======
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
              this.initializeMap();
              await this.loadHospitals();
             // Initialize virtual patient counters per hospital
@@ -686,12 +782,21 @@ class EmergencyDispatchGame {
         this.updatePostazioneMarkers();
         this.updateMezzoMarkers();
     }    async loadMezzi() {
+<<<<<<< HEAD
          try {             // Determine base mezzi file based on selected central
+=======
+         try {
+             // Determine base mezzi file based on selected central
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
              let baseFile = 'src/data/mezzi_sra.json';
              switch(window.selectedCentral) {
                  case 'SRL': baseFile = 'src/data/Mezzi_SRL.json'; break;
                  case 'SRM': baseFile = 'src/data/mezzi_srm.json'; break;
+<<<<<<< HEAD
                  case 'SRP': baseFile = 'src/data/Mezzi_SRP.json'; break; // Corretto per case sensitivity su GitHub Pages
+=======
+                 case 'SRP': baseFile = 'src/data/mezzi_srp.json'; break; // Modificato per compatibilità con GitHub Pages
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
              }
              // Fetch the base file directly
              const response = await fetch(baseFile);
@@ -734,6 +839,7 @@ class EmergencyDispatchGame {
                 };
             });
 
+<<<<<<< HEAD
             // Raggruppa per nome_radio tutte le varianti
             const now = window.simTime
                 ? (() => { const d = new Date(); d.setHours(Math.floor(window.simTime/3600), Math.floor((window.simTime%3600)/60), 0, 0); return d; })()
@@ -764,6 +870,9 @@ class EmergencyDispatchGame {
             Object.values(mezziByRadio).forEach(varianti => {
                 varianti.forEach(m => this.mezzi.push(m));
             });
+=======
+            this.mezzi = mezzi;
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
 
             // Una postazione può ospitare più mezzi (anche con stesso nome_radio)
             this.postazioniMap = {};
@@ -845,13 +954,18 @@ class EmergencyDispatchGame {
             }
             // SRL: load SRA, SRP
             if (window.selectedCentral === 'SRL') {
+<<<<<<< HEAD
                 for (const [file,prefix,flag] of [
                     ['src/data/mezzi_sra.json','SRA','isSRL'],
+=======
+                for (const [file,prefix,flag] of [                    ['src/data/mezzi_sra.json','SRA','isSRL'],
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                     ['src/data/mezzi_srp.json','SRP','isSRL']
                 ]) {
                     try {
                         const res = await fetch(file);
                         let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
+<<<<<<< HEAD
                         // Raggruppa per nome_radio e carica tutte le varianti
                         const mezziByRadio = {};
                         arr.forEach(m => {
@@ -868,14 +982,27 @@ class EmergencyDispatchGame {
                                 if(!this.postazioniMap[key2]) this.postazioniMap[key2]={ nome:nomePost, lat, lon, mezzi:[], isSRL:true };
                                 this.postazioniMap[key2].mezzi.push(mezzo);
                             });
+=======
+                        arr.forEach(item=>{
+                            const nomePost=(item['Nome Postazione']||'').trim(); if(!nomePost)return;
+                            const [lat,lon]=(item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if(lat==null||lon==null)return;
+                            const mezzo={ nome_radio:`(${prefix}) ${(item['Nome radio']||'').trim()}`, postazione:nomePost, tipo_mezzo:item['Mezzo']||'', convenzione:item['Convenzione']||'', Giorni:item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro':item['Orario di lavoro']||'', lat, lon, stato:1 };
+                            this.mezzi.push(mezzo); const key=`${nomePost}_${lat}_${lon}`;
+                            if(!this.postazioniMap[key]) this.postazioniMap[key]={ nome:nomePost, lat, lon, mezzi:[], isSRL:true };
+                            this.postazioniMap[key].mezzi.push(mezzo);
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                         });
                     } catch(e){console.error(e)}
                 }
             }
             // SRM: load SRA, SRL, SRP
             if (window.selectedCentral === 'SRM') {
+<<<<<<< HEAD
                 for (const [file,prefix,flag] of [
                     ['src/data/mezzi_sra.json','SRA','isSRM'],
+=======
+                for (const [file,prefix,flag] of [                    ['src/data/mezzi_sra.json','SRA','isSRM'],
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                     ['src/data/Mezzi_SRL.json','SRL','isSRL'],
                     ['src/data/mezzi_srp.json','SRP','isSRP']
                 ]) {
@@ -883,6 +1010,7 @@ class EmergencyDispatchGame {
                         const res = await fetch(file);
                         let arr = await res.json();
                         if (!Array.isArray(arr)) arr = Object.values(arr).find(v => Array.isArray(v)) || [];
+<<<<<<< HEAD
                         // Raggruppa per nome_radio e carica tutte le varianti
                         const mezziByRadio = {};
                         arr.forEach(m => {
@@ -899,6 +1027,26 @@ class EmergencyDispatchGame {
                                 if(!this.postazioniMap[key2]) this.postazioniMap[key2]={ nome:nomePost, lat, lon, mezzi:[], [flag]:true };
                                 this.postazioniMap[key2].mezzi.push(mezzo);
                             });
+=======
+                        arr.forEach(item => {
+                            const nomePost = (item['Nome Postazione'] || '').trim();
+                            if (!nomePost) return;
+                            const [lat, lon] = (item['Coordinate Postazione'] || '').split(',').map(s => Number(s.trim()));
+                            if (lat == null || lon == null) return;
+                            const mezzo = {
+                                nome_radio: `(${prefix}) ${(item['Nome radio'] || '').trim()}`,
+                                postazione: nomePost,
+                                tipo_mezzo: item['Mezzo'] || '',
+                                convenzione: item['Convenzione'] || '',
+                                Giorni: item['Giorni'] || item['giorni'] || 'LUN-DOM',
+                                'Orario di lavoro': item['Orario di lavoro'] || '',
+                                lat, lon, stato: 1
+                            };
+                            this.mezzi.push(mezzo);
+                            const key = `${nomePost}_${lat}_${lon}`;
+                            if (!this.postazioniMap[key]) this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], [flag]: true };
+                            this.postazioniMap[key].mezzi.push(mezzo);
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                         });
                     } catch(e) { console.error(e); }
                 }
@@ -913,6 +1061,7 @@ class EmergencyDispatchGame {
                     try {
                         const res = await fetch(file);
                         let arr = await res.json(); if (!Array.isArray(arr)) arr = Object.values(arr).find(v=>Array.isArray(v))||[];
+<<<<<<< HEAD
                         // Raggruppa per nome_radio e carica tutte le varianti
                         const mezziByRadio = {};
                         arr.forEach(m => {
@@ -933,23 +1082,50 @@ class EmergencyDispatchGame {
                     } catch(e){console.error(e)}
                 }
             }            // Non ordinare gli ospedali globalmente qui, l'ordinamento avverrà in UI.js per rispettare i gruppi
+=======
+                        arr.forEach(item=>{
+                            const nomePost=(item['Nome Postazione']||'').trim(); if(!nomePost)return;
+                            const [lat,lon]=(item['Coordinate Postazione']||'').split(',').map(s=>Number(s.trim())); if(lat==null||lon==null)return;
+                            const mezzo={ nome_radio:`(${prefix}) ${(item['Nome radio']||'').trim()}`, postazione:nomePost, tipo_mezzo:item['Mezzo']||'', convenzione:item['Convenzione']||'', Giorni:item['Giorni']||item['giorni']||'LUN-DOM', 'Orario di lavoro':item['Orario di lavoro']||'', lat, lon, stato:1 };
+                            this.mezzi.push(mezzo); const key=`${nomePost}_${lat}_${lon}`;
+                            if(!this.postazioniMap[key]) this.postazioniMap[key]={ nome:nomePost, lat, lon, mezzi:[], [flag]:true };
+                            this.postazioniMap[key].mezzi.push(mezzo);
+                        });
+                    } catch(e){console.error(e)}
+                }
+            }
+
+            // ...existing code continue
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         } catch(e) {
             console.error("Errore nel caricamento dei mezzi:",e);
         }
     }
 
     async loadHospitals() {
+<<<<<<< HEAD
         try {           // SRA central: mostra ospedali SRA, Laghi, Metro e Pianura in ordine
            if (window.selectedCentral === 'SRA') {
                let hospitalsAll = [];
                // 1) ospedali.json (SRA senza prefisso)
+=======
+        try {
+           // SRA central: mostra ospedali SRA, Laghi, Metro e Pianura in ordine
+           if (window.selectedCentral === 'SRA') {
+               let hospitalsAll = [];
+               // 1) ospedali.json (prefisso SRA)
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                const resBase = await fetch('src/data/ospedali.json');
                const baseList = await resBase.json();
                (Array.isArray(baseList)? baseList : Object.values(baseList).find(v=>Array.isArray(v))||[])
                .forEach(h => {
                    const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
                    const lat = coords[0], lon = coords[1];
+<<<<<<< HEAD
                    if(lat!=null&&lon!=null) hospitalsAll.push({ nome: h.OSPEDALE?.trim()||'', lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+=======
+                   if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRA) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                });
                // 2) PS SOREU Laghi (prefisso SRL)
                const resLaghi = await fetch('src/data/PS SOREU laghi.json');
@@ -963,7 +1139,11 @@ class EmergencyDispatchGame {
                const resMetro = await fetch('src/data/PS SOREU Metro.json');
                const metroList = await resMetro.json();
                (Array.isArray(metroList)? metroList : []).forEach(h=>{
+<<<<<<< HEAD
                    const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+=======
+                   const coords=(h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                    const lat=coords[0], lon=coords[1];
                    if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRM) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
                });
@@ -971,7 +1151,11 @@ class EmergencyDispatchGame {
                const resPianura = await fetch('src/data/PS SOREU pianura.json');
                const pianuraList = await resPianura.json();
                (Array.isArray(pianuraList)? pianuraList : []).forEach(h=>{
+<<<<<<< HEAD
                    const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+=======
+                   const coords=(h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                    const lat=coords[0], lon=coords[1];
                    if(lat!=null&&lon!=null) hospitalsAll.push({ nome: `(SRP) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: h.INDIRIZZO||'', raw: h });
                });
@@ -1673,8 +1857,13 @@ class EmergencyDispatchGame {
             ).join('');
         }
 
+<<<<<<< HEAD
         // Mostra solo i mezzi in stato 1, 2 e 7
         const mezziFiltrati = mezzi.filter(m => [1,2,7].includes(m.stato) || (call.mezziAssegnati||[]).includes(m.nome_radio));
+=======
+        // Mostra mezzi in stato 1, 2, 6, 7 oppure già assegnati
+        const mezziFiltrati = mezzi.filter(m => [1,2,6,7].includes(m.stato) || (call.mezziAssegnati||[]).includes(m.nome_radio));
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         let html = `<table class='stato-mezzi-table' style='width:100%;margin-bottom:0;'>
             <thead><tr>
                 <th style='width:38%;text-align:left; padding:1px 2px;'>Nome</th>

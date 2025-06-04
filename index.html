@@ -226,10 +226,13 @@
         window.selectedCentral = document.getElementById('central-select').value;
         // Hide overlay
         document.getElementById('central-selector').style.display = 'none';
+<<<<<<< HEAD
         // Aggiorna il titolo in topbar con la SOREU selezionata
         const sel = document.getElementById('central-select');
         const hdr = document.querySelector('.header-title');
         if (hdr) hdr.textContent = sel.options[sel.selectedIndex].text;
+=======
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         // Load corresponding indirizzi if not default SRA
         if (window.selectedCentral !== 'SRA') {
             const path = `src/data/indirizzi ${window.selectedCentral}.json`;
@@ -252,10 +255,13 @@
         window._dayManuallySet = false;
         window.simTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
         // Start game
+<<<<<<< HEAD
         if (typeof EmergencyDispatchGame === 'undefined') {
             console.error('EmergencyDispatchGame non è definito. Assicurati che game.js sia caricato correttamente.');
             return;
         }
+=======
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
         window.game = new EmergencyDispatchGame();
         game.initialize();
     };
@@ -284,6 +290,7 @@
                 const m = document.getElementById('sim-minute').value;
                 window.simTime = (parseInt(h)||0)*3600 + (parseInt(m)||0)*60;
                 if(typeof updateSimClock==='function') updateSimClock();
+<<<<<<< HEAD
                 
                 // Force availability update after time change
                 window._forceAvailabilityUpdate = true;
@@ -292,6 +299,9 @@
                     aggiornaDisponibilitaMezzi();
                 }
                 
+=======
+                if(typeof aggiornaDisponibilitaMezzi==='function') aggiornaDisponibilitaMezzi();
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                 document.getElementById('sim-settings-popup').style.display = 'none';
             };            // Mostra giorno nella clock
             const origUpdateSimClock = window.updateSimClock;
@@ -315,6 +325,7 @@
                             window.simTime = sec;
                             dayIdx = (dayIdx + 1) % 7;
                             window.simDay = giorniSettimanaIT[dayIdx];
+<<<<<<< HEAD
                             
                             // Forza l'aggiornamento della disponibilità a mezzanotte
                             window._forceAvailabilityUpdate = true;
@@ -322,6 +333,8 @@
                             if(typeof aggiornaDisponibilitaMezzi === 'function') {
                                 aggiornaDisponibilitaMezzi();
                             }
+=======
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
                         }
                         window.simDay = giorniSettimanaIT[dayIdx];
                     }

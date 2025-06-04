@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [
   { "indirizzo abitazione": "Piazza Trento e Trieste, 20900 Monza MB", "lat": 45.580620, "lon": 9.272840 },
   { "indirizzo abitazione": "Via Azzone Visconti, 20900 Monza MB", "lat": 45.584420, "lon": 9.270880 },
@@ -25,3 +26,32 @@
   { "indirizzo abitazione": "Viale Aguggiari, 21100 Varese VA", "lat": 45.826200, "lon": 8.827300 },
   { "indirizzo abitazione": "Via Manin, 21100 Varese VA", "lat": 45.815600, "lon": 8.822800 }
 ]
+=======
+[
+  { "indirizzo abitazione": "Piazza Trento e Trieste, 20900 Monza MB", "lat": 45.580620, "lon": 9.272840 },
+  { "indirizzo abitazione": "Via Azzone Visconti, 20900 Monza MB", "lat": 45.584420, "lon": 9.270880 },
+  { "indirizzo abitazione": "Piazza Libertà, 20851 Lissone MB", "lat": 45.610360, "lon": 9.241540 },
+  { "indirizzo abitazione": "Via Assunta, 20851 Lissone MB", "lat": 45.614070, "lon": 9.236880 }, 
+  { "indirizzo abitazione": "Piazza Roma, 20831 Seregno MB", "lat": 45.653730, "lon": 9.204560 },
+  { "indirizzo abitazione": "Via Umberto I, 20831 Seregno MB", "lat": 45.653020, "lon": 9.208300 },
+  { "indirizzo abitazione": "Piazza Conciliazione, 20832 Desio MB", "lat": 45.615220, "lon": 9.207360 },
+  { "indirizzo abitazione": "Via Lampugnani, 20832 Desio MB", "lat": 45.617940, "lon": 9.205540 },
+  { "indirizzo abitazione": "Piazza Arese, 20811 Cesano Maderno MB", "lat": 45.617760, "lon": 9.153950 },
+  { "indirizzo abitazione": "Via Don Luigi Viganò, 20811 Cesano Maderno MB", "lat": 45.619540, "lon": 9.158290 },
+  { "indirizzo abitazione": "Piazza Cavour, 22100 Como CO", "lat": 45.812270, "lon": 9.084510 },
+  { "indirizzo abitazione": "Via Vittorio Emanuele II, 22100 Como CO", "lat": 45.811220, "lon": 9.080530 },
+  { "indirizzo abitazione": "Viale Lecco, 22100 Como CO", "lat": 45.808500, "lon": 9.089000 },
+  { "indirizzo abitazione": "Via Milano, 22100 Como CO", "lat": 45.809700, "lon": 9.072600 },
+  { "indirizzo abitazione": "Lungo Lario Trieste, 22100 Como CO", "lat": 45.816300, "lon": 9.086700 },
+  { "indirizzo abitazione": "Piazza XX Settembre, 23900 Lecco LC", "lat": 45.855420, "lon": 9.391120 },
+  { "indirizzo abitazione": "Corso Martiri della Liberazione, 23900 Lecco LC", "lat": 45.852620, "lon": 9.384800 },
+  { "indirizzo abitazione": "Viale Costituzione, 23900 Lecco LC", "lat": 45.861000, "lon": 9.390000 },
+  { "indirizzo abitazione": "Via Carlo Cattaneo, 23900 Lecco LC", "lat": 45.857100, "lon": 9.383600 },
+  { "indirizzo abitazione": "Lungolario Isonzo, 23900 Lecco LC", "lat": 45.857300, "lon": 9.393700 },
+  { "indirizzo abitazione": "Piazza Monte Grappa, 21100 Varese VA", "lat": 45.817100, "lon": 8.825400 },
+  { "indirizzo abitazione": "Via Sacco, 21100 Varese VA", "lat": 45.817500, "lon": 8.827200 },
+  { "indirizzo abitazione": "Corso Matteotti, 21100 Varese VA", "lat": 45.816400, "lon": 8.829100 },
+  { "indirizzo abitazione": "Viale Aguggiari, 21100 Varese VA", "lat": 45.826200, "lon": 8.827300 },
+  { "indirizzo abitazione": "Via Manin, 21100 Varese VA", "lat": 45.815600, "lon": 8.822800 }
+]
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4

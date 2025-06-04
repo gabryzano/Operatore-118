@@ -32,6 +32,7 @@
   { "indirizzo abitazione": "Piazza Vittorio Emanuele II, 1, 20066 Melzo MI", "lat": 45.5000, "lon": 9.4167 },
   { "indirizzo abitazione": "Via Dante Alighieri, 4, 20062 Cassano d'Adda MI", "lat": 45.5333, "lon": 9.5167 },
   { "indirizzo abitazione": "Piazza Maggiore, 20065 Inzago MI", "lat": 45.5500, "lon": 9.4500 },
+<<<<<<< HEAD
   { "indirizzo abitazione": "Piazza Nazionale, 20056 Trezzo sull'Adda MI", "lat": 45.6167, "lon": 9.5167 },
   { "indirizzo abitazione": "Piazza della Vittoria, 27100 Pavia PV", "lat": 45.184725, "lon": 9.158207 },
   { "indirizzo abitazione": "Piazza Ducale, 27029 Vigevano PV", "lat": 45.316700, "lon": 8.850000 },
@@ -165,4 +166,7 @@
   { "indirizzo abitazione": "Via Vittorio Veneto, 20010 Cerro Maggiore MI", "lat": 45.5500, "lon": 8.9900 },
   { "indirizzo abitazione": "Via Roma, 20010 Villa Cortese MI", "lat": 45.5500, "lon": 9.0000 },
   { "indirizzo abitazione": "Via Cavour, 20010 Dairago MI", "lat": 45.5500, "lon": 9.0100 }
+=======
+  { "indirizzo abitazione": "Piazza Nazionale, 20056 Trezzo sull'Adda MI", "lat": 45.6167, "lon": 9.5167 }
+>>>>>>> fa63a633c712932c8071d3a2f945a0898518b6b4
 ]
