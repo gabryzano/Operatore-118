@@ -51,7 +51,7 @@ class GameUI {
                 </span>
             </div>
             <div class="call-details" style="display:none;">
-                <div class="call-sim-voice"><span class="sim-patologia">${call.simText || 'Paziente con sintomi da valutare...'}</span></div>
+                <div class="call-sim-voice"><span class="sim-patologia">${(call.simText || 'Paziente con sintomi da valutare...').replace(/\s*\[[^\]]+\]/g, '')}</span></div>
                 <div class="call-indirizzo"><b>Indirizzo:</b> ${call.indirizzo || call.location || 'Indirizzo sconosciuto'}</div>
                 <div class="call-actions" style="margin-top:10px;">
                     <button class="btn-crea-missione" style="background:#1976d2;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">Crea missione</button>
@@ -532,7 +532,10 @@ class GameUI {
                                     // Other departments
                                     else {
                                         const val = raw[dept] != null ? raw[dept].toString().trim().toUpperCase() : '';
-                                        matchRecommended = (val === 'TRUE' || val === dept);
+                                        // Support boolean true or string 'TRUE' or matching code
+                                        const rawVal = raw[dept];
+                                        const strVal = rawVal != null ? rawVal.toString().trim().toUpperCase() : '';
+                                        matchRecommended = (rawVal === true) || (strVal === 'TRUE') || (strVal === dept);
                                     }
                                     if (matchRecommended) {
                                         label += ' (consigliato)';
@@ -721,13 +724,8 @@ class GameUI {
 
         // Prepara liste mezzi: tieni mezzi della centrale corrente e di Creli; altri centrali solo se stato != 1 e != 8
         const allMezzi = window.game.mezzi || [];
-        let mezzi = allMezzi.filter(m => {
-            const isForeign = m.nome_radio.startsWith('(');
-            if (!isForeign) {
-                return true;
-            }
-            return m.stato !== 1 && m.stato !== 8;
-        });
+        // Show all vehicles from all centrals, including idle foreign ones
+        let mezzi = allMezzi;
         const mezziStato8 = mezzi.filter(m => m.stato === 8);
         let altriMezzi = mezzi.filter(m => m.stato !== 8);
         altriMezzi.forEach(m => {

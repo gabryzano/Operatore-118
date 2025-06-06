@@ -15,9 +15,9 @@
   { "indirizzo abitazione": "Via Milano, 22100 Como CO", "lat": 45.809700, "lon": 9.072600 },
   { "indirizzo abitazione": "Lungo Lario Trieste, 22100 Como CO", "lat": 45.816300, "lon": 9.086700 },
   { "indirizzo abitazione": "Piazza XX Settembre, 23900 Lecco LC", "lat": 45.855420, "lon": 9.391120 },
-  { "indirizzo abitazione": "Corso Martiri della Liberazione, 23900 Lecco LC", "lat": 45.852620, "lon": 9.384800 },
+  { "indirizzo abitazione": "Corso Martiri della Liberazione, 23900 Lecco LC", "lat": 45.8494239, "lon": 9.3946261 },
   { "indirizzo abitazione": "Viale Costituzione, 23900 Lecco LC", "lat": 45.861000, "lon": 9.390000 },
-  { "indirizzo abitazione": "Via Carlo Cattaneo, 23900 Lecco LC", "lat": 45.857100, "lon": 9.383600 },
+  { "indirizzo abitazione": "Piazza Antonio Stoppani, 23900 Lecco LC", "lat": 45.857306, "lon": 9.3847111 },
   { "indirizzo abitazione": "Lungolario Isonzo, 23900 Lecco LC", "lat": 45.857300, "lon": 9.393700 },
   { "indirizzo abitazione": "Piazza Monte Grappa, 21100 Varese VA", "lat": 45.817100, "lon": 8.825400 },
   { "indirizzo abitazione": "Via Sacco, 21100 Varese VA", "lat": 45.817500, "lon": 8.827200 },
@@ -126,5 +126,15 @@
   { "indirizzo abitazione": "Via Dante Alighieri, 22070 Guanzate CO", "lat": 45.7330, "lon": 9.0330 },
   { "indirizzo abitazione": "Via Roma, 22071 Cadorago CO", "lat": 45.7330, "lon": 9.0330 },
   { "indirizzo abitazione": "Via Camillo Benso Cavour, 22070 Casnate con Bernate CO", "lat": 45.7830, "lon": 9.0830 },
-  { "indirizzo abitazione": "Via Vittorio Veneto, 22070 Montano Lucino CO", "lat": 45.8000, "lon": 9.0500 }
+  { "indirizzo abitazione": "Via Vittorio Veneto, 22070 Montano Lucino CO", "lat": 45.8000, "lon": 9.0500 },
+  { "indirizzo RSA": "RSA Lecco, Via Airoldi e Muzzi 2, Lecco LC", "lat": 45.853155, "lon": 9.4179124 },
+  { "indirizzo RSA": "RSA Lecco, Via San Nicolò 8, Lecco LC", "lat": 45.857100, "lon": 9.390500 },
+  { "indirizzo RSA": "RSA Merate, Via Monte Grappa 59, Merate LC", "lat": 45.7077471, "lon": 9.4144229 },
+  { "indirizzo RSA": "RSA Lierna, Via Papa Giovanni XXIII 41, Lierna LC", "lat": 45.9562108, "lon": 9.3036963 },
+  { "indirizzo RSA": "RSA Civate, Via Nazario Sauro 5, Civate LC", "lat": 45.8269355, "lon": 9.3418552 },
+  { "indirizzo RSA": "RSA Monza, Via Carlo Collodi 6, Monza MB", "lat": 45.578985, "lon": 9.2910991 },
+  { "indirizzo RSA": "RSA Brugherio, Via Martin Luther King 4, Brugherio MB", "lat": 45.5438182, "lon": 9.3009354 },
+  { "indirizzo RSA": "RSA Seregno, Via Piave 12, Seregno MB", "lat": 45.6551769, "lon": 9.1943431 },
+  { "indirizzo RSA": "RSA Desio,Via Canonico Villa 108, Desio MB", "lat": 45.608541, "lon": 9.2088357 },
+  { "indirizzo RSA": "RSA Lissone, Via Monsignor Ennio Bernasconi 14, Lissone MB", "lat": 45.6198301, "lon": 9.2385335 }
 ]
