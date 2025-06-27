@@ -195,12 +195,14 @@ class GameUI {
             : '';
         
         div.innerHTML = `            <div class="missione-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
-                <span>
-                    <span class="missione-codice-box" style="display:inline-block;width:5px;height:5px;margin-right:8px;vertical-align:middle;background:${getColoreCodice(call.codice)};background-size:cover;"></span>
-                    ${call.missioneId} - ${indirizzoSintetico}${tipiMezziText}${ospedaleHtml}
-                    ${missioneStatusIcon}${missioneStatusText}
-                </span>
-                <button class='btn-edit-missione'>Modifica</button>
+                 <span>
+                     <span class="missione-codice-box" style="display:inline-block;width:5px;height:5px;margin-right:8px;vertical-align:middle;background:${getColoreCodice(call.codice)};background-size:cover;"></span>
+                     ${call.missioneId} - ${indirizzoSintetico}${tipiMezziText}${ospedaleHtml}
+                     ${missioneStatusIcon}${missioneStatusText}
+                     ${call.vvfAllertati ? '<span style="margin-left:8px;color:#d32f2f;font-weight:bold;">VVF</span>' : ''}
+                     ${call.ffoAllertate ? '<span style="margin-left:8px;color:#1565C0;font-weight:bold;">FFO</span>' : ''}
+                 </span>
+                 <button class='btn-edit-missione'>Modifica</button>
             </div>
             <div class="missione-details" style="display:none;">
                 <div><b>Tipologia Mezzi:</b> ${
@@ -369,6 +371,8 @@ class GameUI {
                 <span class="missione-codice-box" style="display:inline-block;width:18px;height:18px;border-radius:4px;margin-right:8px;vertical-align:middle;background:${getColoreCodice(call.codice)};"></span>
                 ${call.missioneId} - ${indirizzoSintetico}${tipiMezziText}${ospedaleHtml}
                 ${missioneStatusIcon}${missioneStatusText}
+                ${call.vvfAllertati ? '<span style="margin-left:8px;color:#d32f2f;font-weight:bold;">VVF</span>' : ''}
+                ${call.ffoAllertate ? '<span style="margin-left:8px;color:#1565C0;font-weight:bold;">FFO</span>' : ''}
             </span>
             <button class='btn-edit-missione'>Modifica</button>
         `;
