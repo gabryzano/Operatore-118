@@ -360,6 +360,15 @@
         "Giorni": "LUN-DOM"
     },
     {
+        "Nome Postazione": "POSTAZIONE Oriolo",
+        "Coordinate Postazione": "40.0519899,16.4490081",
+        "Mezzo": "MSA2_A",
+        "Nome radio": "PET Oriolo",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
         "Nome Postazione": "POSTAZIONE Pallagorio",
         "Coordinate Postazione": "39.3083969,16.9064234",
         "Mezzo": "MSA1_A",

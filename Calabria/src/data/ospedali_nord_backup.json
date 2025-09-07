@@ -12,8 +12,8 @@
     "NCH": true,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.389322,
-    "lon": 16.420539
+    "lat": 39.21898,
+    "lon": 16.105109
   },
   {
     "OSPEDALE": "H Corigliano",
@@ -28,8 +28,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": false,
-    "lat": 39.513703,
-    "lon": 16.136333
+    "lat": 39.517294,
+    "lon": 16.347899
   },
   {
     "OSPEDALE": "H Rossano",
@@ -44,8 +44,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.26218,
-    "lon": 16.158367
+    "lat": 39.270139,
+    "lon": 16.298635
   },
   {
     "OSPEDALE": "H Castrovillari ",
@@ -60,8 +60,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.247995,
-    "lon": 16.505141
+    "lat": 39.364387,
+    "lon": 16.50882
   },
   {
     "OSPEDALE": "H Cetraro",
@@ -76,8 +76,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": false,
-    "lat": 39.276464,
-    "lon": 16.157116
+    "lat": 39.099597,
+    "lon": 16.324837
   },
   {
     "OSPEDALE": "H Paola",
@@ -92,8 +92,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": false,
-    "lat": 39.170197,
-    "lon": 16.144279
+    "lat": 39.21296,
+    "lon": 15.982375
   },
   {
     "OSPEDALE": "H Crotone",
@@ -108,8 +108,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.564013,
-    "lon": 16.255491
+    "lat": 39.293806,
+    "lon": 16.364407
   },
   {
     "OSPEDALE": "H Praia a Mare",
@@ -124,8 +124,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.098456,
-    "lon": 16.278342
+    "lat": 39.102256,
+    "lon": 16.409861
   },
   {
     "OSPEDALE": "H San Giovanni in Fiore",
@@ -140,8 +140,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.469148,
-    "lon": 16.337979
+    "lat": 39.369352,
+    "lon": 16.085202
   },
   {
     "OSPEDALE": "H Acri",
@@ -156,8 +156,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.364676,
-    "lon": 16.455425
+    "lat": 39.17288,
+    "lon": 16.51672
   },
   {
     "OSPEDALE": "H Cariati",
@@ -172,7 +172,7 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.510233,
-    "lon": 16.105471
+    "lat": 39.372749,
+    "lon": 16.24948
   }
 ]

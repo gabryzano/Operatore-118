@@ -170,11 +170,6 @@ function interrompiMovimento(mezzo) {
         clearTimeout(mezzo._timerStato4);
         mezzo._timerStato4 = null;
     }
-    
-    // Se il mezzo era in stato 7 (rientro in sede), mostra solo 'missione interrotta'
-    if (mezzo.stato === 7) {
-        mezzo.comunicazioni = ['Missione interrotta'];
-    }
 }
 
 // Funzione centralizzata per avanzamento stato mezzo
@@ -184,21 +179,29 @@ function setStatoMezzo(mezzo, nuovoStato) {
         nuovoStato === 7 || nuovoStato === 1 ||
         (nuovoStato > statoAttuale && nuovoStato <= 7)
     ) {
-        // Track previous state for special handling of state 7
-        mezzo.statoPrecedente = statoAttuale;
         mezzo.stato = nuovoStato;
-        
-        // Clear previous state tracking when returning to available state
-        if (nuovoStato === 1) {
-            mezzo.statoPrecedente = null;
-        }
 
-        // Clear previous communications and keep only Report pronto if in appropriate state
-        if (Array.isArray(mezzo.comunicazioni)) {
-            const reportPronto = mezzo.comunicazioni.find(msg => msg.includes('Report pronto'));
+        // Gestisci i messaggi specifici per i cambi di stato
+        if (nuovoStato === 7) {
+            // Passaggio allo stato 7 (rientro in sede)
+            if (statoAttuale === 2) {
+                mezzo.comunicazioni = ['Missione interrotta'];
+            } else if (statoAttuale === 6 || statoAttuale === 3) {
+                mezzo.comunicazioni = ['Diretto in sede'];
+            } else {
+                mezzo.comunicazioni = ['Diretto in sede'];
+            }
+        } else if (nuovoStato === 1) {
+            // Passaggio allo stato 1 (disponibile) - cancella tutti i messaggi
             mezzo.comunicazioni = [];
-            if (reportPronto && mezzo.stato === 3) {
-                mezzo.comunicazioni.push(reportPronto);
+        } else {
+            // Per altri stati, gestione normale delle comunicazioni
+            if (Array.isArray(mezzo.comunicazioni)) {
+                const reportPronto = mezzo.comunicazioni.find(msg => msg.includes('Report pronto'));
+                mezzo.comunicazioni = [];
+                if (reportPronto && mezzo.stato === 3) {
+                    mezzo.comunicazioni.push(reportPronto);
+                }
             }
         }
         
@@ -320,9 +323,17 @@ function gestisciStato3(mezzo, call) {
         let reportKey = null;
         if (mezzoType.startsWith('MSB')) {
             reportKey = 'MSB';
-        } else if (mezzoType.startsWith('MSA1')) {
+        } else if (mezzoType.startsWith('MSI')) {
+            // MSI usa il report di MSA1
             reportKey = 'MSA1';
-        } else if (mezzoType.startsWith('MSA2')) {
+        } else if (mezzoType.startsWith('ILS')) {
+            // ILS usa il report di MSA1
+            reportKey = 'MSA1';
+        } else if (mezzoType.startsWith('ALS')) {
+            // ALS usa il report di MSA2
+            reportKey = 'MSA2';
+        } else if (mezzoType.startsWith('MSA') || mezzoType.startsWith('VLV')) {
+            // MSA e VLV usano il report di MSA2
             reportKey = 'MSA2';
         } else if (mezzoType === 'ELI') {
             // ELI uses MSA2 report
@@ -487,7 +498,7 @@ class EmergencyDispatchGame {
         };
 
         // Counters for mission numbers per SOREU central
-        this.missionCounter = { nord: 0, sud: 0 };
+        this.missionCounter = { OVEST: 0, EST: 0, ROMAGNA: 0 };
         
         // Verifica che GameUI sia definito prima di creare l'istanza
         if (typeof GameUI === 'undefined') {
@@ -503,6 +514,9 @@ class EmergencyDispatchGame {
         } else {
             this.ui = new GameUI(this);
         }
+
+        // L'inizializzazione sarà chiamata esplicitamente dall'HTML
+        // Non chiamare this.initialize() qui per evitare doppie inizializzazioni
 
         // --- Dynamic call scheduling based on time-of-day ---
         const getRate = () => {
@@ -635,23 +649,44 @@ class EmergencyDispatchGame {
 
     async loadChiamate() {
         try {
-            // Prova prima con il path minuscolo (compatibile GitHub Pages)
+            console.log('[DEBUG loadChiamate] Caricamento chiamate.json...');
             const response = await fetch('src/data/chiamate.json');
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status} loading chiamate.json`);
             }
-            // Carica come testo per rimuovere eventuali commenti
             let text = await response.text();
-            // Rimuovi righe commentate (// ...)
             text = text.replace(/^\s*\/\/.*$/gm, '');
             this.chiamateTemplate = JSON.parse(text);
+            console.log('[SUCCESS loadChiamate] Chiamate caricate:', Object.keys(this.chiamateTemplate).length, 'template');
         } catch (e) {
-            console.error("Error loading chiamate:", e);
+            console.error("[ERROR loadChiamate] Errore caricamento chiamate:", e);
             this.chiamateTemplate = null;
         }
-    }    async initialize() {
-         try {
+    }
+    
+    async initialize() {
+        // Controllo per evitare inizializzazioni multiple
+        if (this._isInitializing || this._initialized) {
+            console.warn('Inizializzazione già in corso o completata');
+            return;
+        }
+        this._isInitializing = true;
+        
+        console.log('[DEBUG initialize] Inizio inizializzazione gioco...');
+        
+        try {
+             console.log('[DEBUG initialize] Chiamando loadChiamate...');
              await this.loadChiamate();
+             console.log('[DEBUG initialize] loadChiamate completato, chiamateTemplate:', !!this.chiamateTemplate);
+             
+             if (!this.chiamateTemplate) {
+                 console.error('[ERROR initialize] Fallimento caricamento chiamateTemplate, retry...');
+                 await this.loadChiamate(); // Secondo tentativo
+                 if (!this.chiamateTemplate) {
+                     console.error('[ERROR initialize] Fallimento definitivo caricamento chiamateTemplate');
+                 }
+             }
+             
              await this.loadStatiMezzi();
              await this.loadMezzi();
              
@@ -665,6 +700,16 @@ class EmergencyDispatchGame {
              
 
              this.initializeMap();
+             
+             // Aspetta un momento per assicurarsi che la mappa sia completamente caricata
+             await new Promise(resolve => setTimeout(resolve, 1000));
+             
+             if (!this.map) {
+                 console.error('[ERROR initialize] Mappa non creata correttamente!');
+             } else {
+                 console.log('[SUCCESS initialize] Mappa pronta per i marker!');
+             }
+             
              await this.loadHospitals();
             // Initialize virtual patient counters per hospital
             this.hospitalPatientCount = {};
@@ -691,8 +736,15 @@ class EmergencyDispatchGame {
                     }
                 }, firstInterval);
             }
+            
+            this._initialized = true;
+            
+            // Avvia controllo periodico per marker mancanti
+            this.startMarkerCheckLoop();
          } catch (e) {
              console.error("Error during initialization:", e);
+         } finally {
+             this._isInitializing = false;
          }
     }
 
@@ -754,44 +806,198 @@ class EmergencyDispatchGame {
         const interval = Math.round(baseInterval * randomFactor);
 
         simTimeout(() => {
-            this.generateNewCall();
-            this.scheduleNextCall();
+            if (window.autoCallsEnabled) {
+                this.generateNewCall();
+                this.scheduleNextCall();
+            } else {
+                this.scheduleNextCall();
+            }
         }, interval);
     }
 
+    getCentraliLimitrofe(centrale) {
+        // Definisce le centrali limitrofe per ogni centrale principale
+        switch (centrale.toUpperCase()) {
+            case 'OVEST':
+                return ['EST']; // Parma può richiedere supporto da Bologna
+            case 'EST':
+                return ['OVEST', 'ROMAGNA']; // Bologna può richiedere supporto da Parma e Ravenna
+            case 'ROMAGNA':
+                return ['EST']; // Ravenna può richiedere supporto da Bologna
+            default:
+                return [];
+        }
+    }
+
     initializeMap() {
+        console.log('[DEBUG initializeMap] Inizializzazione mappa...');
+        
+        // Rimuovi mappa esistente se presente
         if (this.map) {
             this.map.remove();
+            this.map = null;
         }
+        
+        // Pulisci il container DOM
+        const mapContainer = document.getElementById('game-map');
+        if (mapContainer) {
+            mapContainer.innerHTML = '';
+            // Rimuovi anche eventuali classi Leaflet
+            mapContainer.className = mapContainer.className.replace(/leaflet-\S*/g, '');
+        } else {
+            console.error('[ERROR initializeMap] Container game-map non trovato!');
+            return;
+        }
+        
         // Determine initial map center and zoom based on selected central
-        let initCenter = [39.307005, 16.2633556]; // default Cosenza (nord)
-        const initZoom = 10;
+        let initCenter = [44.8015, 10.3279]; // default Parma (Emilia Ovest)
+        const initZoom = 11;
         switch (window.selectedCentral) {
-            case 'sud': // Catanzaro
-                initCenter = [38.9109, 16.5999]; break;
-            case 'nord': // Cosenza
-                initCenter = [39.307005, 16.2633556]; break;
+            case 'OVEST': // Parma
+                initCenter = [44.8015, 10.3279]; break;
+            case 'EST': // Bologna
+                initCenter = [44.4949, 11.3426]; break;
+            case 'ROMAGNA': // Ravenna
+                initCenter = [44.4183, 12.2035]; break;
         }
+        
+        console.log('[DEBUG initializeMap] Creazione mappa con centro:', initCenter);
         this.map = L.map('game-map').setView(initCenter, initZoom);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
+        
+        console.log('[SUCCESS initializeMap] Mappa creata con successo!');
         this.updatePostazioneMarkers();
-    this.updateMezzoMarkers();
+        this.updateMezzoMarkers();
+        
+        // Aggiungi marker per chiamate esistenti che non ne hanno uno
+        this.addMissingCallMarkers();
+    }
+    
+    addMissingCallMarkers() {
+        console.log('[DEBUG addMissingCallMarkers] Controllo chiamate senza marker...');
+        
+        if (!this.map) {
+            console.warn('[WARNING addMissingCallMarkers] Mappa non disponibile');
+            return;
+        }
+        
+        let markersAdded = 0;
+        this.calls.forEach(call => {
+            // Aggiungi marker se la chiamata non ne ha uno e ha coordinate valide
+            const needsMarker = (!call._marker || call._pendingMarker) && 
+                               call.lat && call.lon && 
+                               !isNaN(call.lat) && !isNaN(call.lon);
+                               
+            if (needsMarker) {
+                try {
+                    // Se esiste già un marker, rimuovilo prima
+                    if (call._marker) {
+                        this.map.removeLayer(call._marker);
+                    }
+                    
+                    const marker = L.marker([call.lat, call.lon], {
+                        icon: L.icon({
+                            iconUrl: 'src/assets/marker-rosso.png',
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 36],
+                            popupAnchor: [0, -36]
+                        })
+                    }).addTo(this.map).bindPopup(`<b>Chiamata</b><br>${call.indirizzo || call.location || 'Indirizzo sconosciuto'}`);
+                    
+                    call._marker = marker;
+                    call._pendingMarker = false; // Rimuovi il flag
+                    markersAdded++;
+                    console.log('[SUCCESS addMissingCallMarkers] Marker aggiunto per chiamata:', call.id);
+                } catch (e) {
+                    console.error('[ERROR addMissingCallMarkers] Errore creazione marker per chiamata:', call.id, e);
+                }
+            }
+        });
+        
+        console.log(`[INFO addMissingCallMarkers] Aggiunti ${markersAdded} marker mancanti`);
+        
+        // Programma controllo periodico per marker mancanti
+        if (markersAdded > 0) {
+            setTimeout(() => this.addMissingCallMarkers(), 2000);
+        }
+    }
+    
+    startMarkerCheckLoop() {
+        console.log('[DEBUG startMarkerCheckLoop] Avvio controllo periodico marker...');
+        
+        const checkLoop = () => {
+            if (this.map && this._initialized) {
+                // Controlla ogni 5 secondi se ci sono chiamate senza marker
+                const pendingCalls = Array.from(this.calls.values()).filter(call => 
+                    (!call._marker || call._pendingMarker) && 
+                    call.lat && call.lon && 
+                    !isNaN(call.lat) && !isNaN(call.lon)
+                );
+                
+                if (pendingCalls.length > 0) {
+                    console.log(`[INFO startMarkerCheckLoop] Trovate ${pendingCalls.length} chiamate senza marker, aggiornamento...`);
+                    this.addMissingCallMarkers();
+                }
+            }
+            
+            // Ripeti ogni 5 secondi
+            setTimeout(checkLoop, 5000);
+        };
+        
+        // Avvia dopo 3 secondi per dare tempo alla mappa di caricarsi
+        setTimeout(checkLoop, 3000);
     }
     async loadMezzi() {
-         // Carica mezzi da tutte le centrali in parallelo e assegna campo central
-    const centralFiles = { nord: 'src/data/mezzi_nord.json', sud: 'src/data/mezzi_sud.json' };
-    const allRaw = [];
-    await Promise.all(Object.entries(centralFiles).map(async ([code, path]) => {
+        // Carica mezzi dalla centrale selezionata E dalle centrali limitrofe
+        const currentCentral = window.selectedCentral || 'OVEST';
+        const mezziFile = window.selectedMezziFile || 'src/data/Mezzi_Ovest.json';
+        const hemsFile = window.selectedHemsFile || 'src/data/HEMS_ER.json';
+        
+        const allRaw = [];
+        
+        // Carica mezzi della centrale principale
         try {
-            const res = await fetch(path);
-            if (!res.ok) return console.error(`File ${path} mancante (HTTP ${res.status})`);
+            const res = await fetch(mezziFile);
+            if (!res.ok) return console.error(`File ${mezziFile} mancante (HTTP ${res.status})`);
             let data = await res.json();
             if (!Array.isArray(data)) data = Object.values(data).find(v => Array.isArray(v)) || [];
-            data.forEach(item => { allRaw.push({ ...item, central: code }); });
-        } catch (e) { console.error(`Errore fetch ${path}`, e); }
-    }));
-    // Mappa raw in oggetti veicolo
-    this.mezzi = allRaw.map(m => {
+            data.forEach(item => { allRaw.push({ ...item, central: currentCentral, isLimitrofa: false }); });
+        } catch (e) { 
+            console.error(`Errore fetch ${mezziFile}`, e); 
+        }
+        
+        // Carica mezzi delle centrali limitrofe
+        const centraliLimitrofe = this.getCentraliLimitrofe(currentCentral);
+        for (const centrale of centraliLimitrofe) {
+            // Converti il nome centrale per il file (Prima lettera maiuscola, resto minuscolo)
+            const centraleFile = centrale.charAt(0).toUpperCase() + centrale.slice(1).toLowerCase();
+            const limitrofaMezziFile = `src/data/Mezzi_${centraleFile}.json`;
+            try {
+                const res = await fetch(limitrofaMezziFile);
+                if (res.ok) {
+                    let data = await res.json();
+                    if (!Array.isArray(data)) data = Object.values(data).find(v => Array.isArray(v)) || [];
+                    data.forEach(item => { allRaw.push({ ...item, central: centrale, isLimitrofa: true }); });
+                }
+            } catch (e) { 
+                console.warn(`Mezzi centrale limitrofa ${centrale} non disponibili:`, e); 
+            }
+        }
+        
+        // Carica HEMS (sempre disponibile per tutte le centrali)
+        try {
+            const res = await fetch(hemsFile);
+            if (res.ok) {
+                let data = await res.json();
+                if (!Array.isArray(data)) data = Object.values(data).find(v => Array.isArray(v)) || [];
+                data.forEach(item => { allRaw.push({ ...item, central: 'HEMS', isLimitrofa: false }); });
+            }
+        } catch (e) { 
+            console.error(`Errore fetch ${hemsFile}`, e); 
+        }
+        
+        // Mappa raw in oggetti veicolo
+        this.mezzi = allRaw.map(m => {
         let lat = m.lat ?? null, lon = m.lon ?? null;
         if ((!lat || !lon) && m['Coordinate Postazione']) {
             const coords = m['Coordinate Postazione'].split(',').map(s => Number(s.trim())); lat = coords[0]; lon = coords[1];
@@ -823,7 +1029,8 @@ class EmergencyDispatchGame {
                 lat: m.lat,
                 lon: m.lon,
                 mezzi: [],
-                isHems: false
+                isCreli: false,
+                central: m.central // Aggiungi centrale di appartenenza
             };
         }
         // mark postazione belonging to this central
@@ -831,123 +1038,104 @@ class EmergencyDispatchGame {
         this.postazioniMap[key].mezzi.push(m);
     });
 
-            // Load HEMS vehicles (ex-Creli)
-            try {
-                const resHems = await fetch('src/data/hems.json');
-                let hems = await resHems.json();
-                if (!Array.isArray(hems)) {
-                    const arr = Object.values(hems).find(v => Array.isArray(v));
-                    hems = arr || [];
-                }
-                hems.forEach(item => {
-                    const nomePost = (item['Nome Postazione'] || '').trim();
-                    if (!nomePost) return;
-                    const coords = item['Coordinate Postazione']?.split(',').map(s => Number(s.trim())) || [];
-                    const lat = coords[0], lon = coords[1];
-                    if (lat == null || lon == null) return;
-                    const mezzo = {
-                        nome_radio: (item['Nome radio'] || '').trim(),
-                        postazione: nomePost,
-                        tipo_mezzo: item['Mezzo'] || '',
-                        convenzione: item['Convenzione'] || '',
-                        Giorni: item['Giorni'] || item['giorni'] || "LUN-DOM",
-                        'Orario di lavoro': item['Orario di lavoro'] || '',
-                        lat, lon, stato: 1, _marker: null, _callMarker: null, _ospedaleMarker: null
-                    };
-                    this.mezzi.push(mezzo);
-                    const key = nomePost + '_' + lat + '_' + lon;
-                    if (!this.postazioniMap[key]) {
-                        this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isHems: true };
-                    }
-                    this.postazioniMap[key].mezzi.push(mezzo);
-                });
-            } catch(e) { console.error('Error loading hems.json:', e); }
-
     }
 
     async loadHospitals() {
         try {
+            // Carica ospedali dalla centrale selezionata E dalle centrali limitrofe
+            const currentCentral = window.selectedCentral || 'OVEST';
+            const ospedaliFile = window.selectedOspedaliFile || 'src/data/Ospedali_Ovest.json';
             let hospitalsAll = [];
             
-            // Carica ospedali per entrambe le centrali
-            if (window.selectedCentral === 'nord') {
-                // Centrale Nord: carica ospedali del nord con priorità
-                const resNord = await fetch('src/data/ospedali_nord.json');
-                const nordList = await resNord.json();
-                (Array.isArray(nordList) ? nordList : Object.values(nordList).find(v => Array.isArray(v)) || [])
-                .forEach(h => {
-                    const coords = (h.COORDINATE || '').split(',').map(s => Number(s.trim()));
-                    const lat = coords[0], lon = coords[1];
-                    if (lat != null && lon != null) hospitalsAll.push({ 
-                        nome: h.OSPEDALE?.trim() || '', 
-                        lat, lon, 
-                        indirizzo: h.INDIRIZZO || '', 
-                        raw: h 
-                    });
-                });
-                
-                // Aggiungi ospedali del sud con prefisso (Sud)
-                try {
-                    const resSud = await fetch('src/data/ospedali_sud.json');
-                    const sudList = await resSud.json();
-                    (Array.isArray(sudList) ? sudList : Object.values(sudList).find(v => Array.isArray(v)) || [])
+            // Carica ospedali della centrale principale
+            try {
+                const res = await fetch(ospedaliFile);
+                if (res.ok) {
+                    const hospitalsList = await res.json();
+                    (Array.isArray(hospitalsList) ? hospitalsList : Object.values(hospitalsList).find(v=>Array.isArray(v))||[])
                     .forEach(h => {
-                        const coords = (h.COORDINATE || '').split(',').map(s => Number(s.trim()));
+                        const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
                         const lat = coords[0], lon = coords[1];
-                        if (lat != null && lon != null) hospitalsAll.push({ 
-                            nome: `(Sud) ${h.OSPEDALE?.trim() || ''}`, 
-                            lat, lon, 
-                            indirizzo: h.INDIRIZZO || '', 
-                            raw: h 
-                        });
+                        if(lat!=null && lon!=null && !isNaN(lat) && !isNaN(lon)) {
+                            hospitalsAll.push({ 
+                                nome: h.OSPEDALE?.trim()||'', 
+                                lat, 
+                                lon, 
+                                indirizzo: h.INDIRIZZO||'', 
+                                raw: h,
+                                central: currentCentral,
+                                isLimitrofa: false
+                            });
+                        }
                     });
-                } catch(e) { console.error('Error loading ospedali_sud.json:', e); }
-                
-            } else if (window.selectedCentral === 'sud') {
-                // Centrale Sud: carica ospedali del sud con priorità
-                const resSud = await fetch('src/data/ospedali_sud.json');
-                const sudList = await resSud.json();
-                (Array.isArray(sudList) ? sudList : Object.values(sudList).find(v => Array.isArray(v)) || [])
-                .forEach(h => {
-                    const coords = (h.COORDINATE || '').split(',').map(s => Number(s.trim()));
-                    const lat = coords[0], lon = coords[1];
-                    if (lat != null && lon != null) hospitalsAll.push({ 
-                        nome: h.OSPEDALE?.trim() || '', 
-                        lat, lon, 
-                        indirizzo: h.INDIRIZZO || '', 
-                        raw: h 
-                    });
-                });
-                
-                // Aggiungi ospedali del nord con prefisso (Nord)
-                try {
-                    const resNord = await fetch('src/data/ospedali_nord.json');
-                    const nordList = await resNord.json();
-                    (Array.isArray(nordList) ? nordList : Object.values(nordList).find(v => Array.isArray(v)) || [])
-                    .forEach(h => {
-                        const coords = (h.COORDINATE || '').split(',').map(s => Number(s.trim()));
-                        const lat = coords[0], lon = coords[1];
-                        if (lat != null && lon != null) hospitalsAll.push({ 
-                            nome: `(Nord) ${h.OSPEDALE?.trim() || ''}`, 
-                            lat, lon, 
-                            indirizzo: h.INDIRIZZO || '', 
-                            raw: h 
-                        });
-                    });
-                } catch(e) { console.error('Error loading ospedali_nord.json:', e); }
+                }
+            } catch (e) {
+                console.warn(`Errore caricamento ospedali: ${e.message}`);
             }
             
-            // Render markers
+            // Carica ospedali delle centrali limitrofe
+            const centraliLimitrofe = this.getCentraliLimitrofe(currentCentral);
+            for (const centrale of centraliLimitrofe) {
+                const limitrofaOspedaliFile = `src/data/Ospedali_${centrale}.json`;
+                try {
+                    const res = await fetch(limitrofaOspedaliFile);
+                    if (res.ok) {
+                        const hospitalsList = await res.json();
+                        (Array.isArray(hospitalsList) ? hospitalsList : Object.values(hospitalsList).find(v=>Array.isArray(v))||[])
+                        .forEach(h => {
+                            const coords = (h.COORDINATE||'').split(',').map(s=>Number(s.trim()));
+                            const lat = coords[0], lon = coords[1];
+                            if(lat!=null && lon!=null && !isNaN(lat) && !isNaN(lon)) {
+                                hospitalsAll.push({ 
+                                    nome: h.OSPEDALE?.trim()||'', 
+                                    lat, 
+                                    lon, 
+                                    indirizzo: h.INDIRIZZO||'', 
+                                    raw: h,
+                                    central: centrale,
+                                    isLimitrofa: true
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn(`Ospedali centrale limitrofa ${centrale} non disponibili:`, e);
+                }
+            }
+            
             this.hospitals = hospitalsAll;
+            console.log(`[INFO] Caricati ${hospitalsAll.length} ospedali (${hospitalsAll.filter(h => !h.isLimitrofa).length} principali + ${hospitalsAll.filter(h => h.isLimitrofa).length} limitrofe)`);
+            
+            // Rimuovi eventuali marker esistenti
+            if (this.hospitals) {
+                this.hospitals.forEach(hosp => {
+                    if (hosp._marker) {
+                        this.map.removeLayer(hosp._marker);
+                        hosp._marker = null;
+                    }
+                });
+            }
+            
+            // Crea marker per tutti gli ospedali
             hospitalsAll.forEach(hosp => {
-                const marker = L.marker([hosp.lat, hosp.lon], { icon: this.getHospitalIcon() })
+                const isLimitrofa = hosp.isLimitrofa;
+                const icon = this.getHospitalIcon(isLimitrofa);
+                const popupTitle = isLimitrofa ? `(${hosp.central}) ${hosp.nome}` : hosp.nome;
+                
+                const marker = L.marker([hosp.lat, hosp.lon], { icon })
                     .addTo(this.map)
-                    .bindPopup(`<b>${hosp.nome}</b><br>${hosp.indirizzo || ''}`);
+                    .bindPopup(`<b>${popupTitle}</b><br>${hosp.indirizzo||''}`);
                 hosp._marker = marker;
             });
             
-        } catch (error) {
-            console.error('Error loading hospitals:', error);
+            // Aggiorna le missioni in corso se necessario
+            if (this.calls && this.ui && typeof this.ui.updateMissioneInCorso === 'function') {
+                Array.from(this.calls.values()).forEach(call => {
+                    this.ui.updateMissioneInCorso(call);
+                });
+            }
+        } catch (e) {
+            console.error("Errore nel caricamento degli ospedali:", e);
         }
     }
 
@@ -960,38 +1148,28 @@ class EmergencyDispatchGame {
         });
     }
 
-    getHospitalIcon() {
+    getHospitalIcon(isLimitrofa = false) {
+        // Usa sfondo bianco per ospedali limitrofi, blu per ospedali principali
+        const bg = isLimitrofa ? "#ffffff" : "#2196f3";
+        const borderColor = isLimitrofa ? "#888" : "#1976d2";
         return L.divIcon({
             className: 'hospital-marker',
-            html: `<div class="hospital-icon">H</div>`,
+            html: `<div class="hospital-icon" style="background:${bg};color:${isLimitrofa ? '#333' : '#fff'};border:2px solid ${borderColor};border-radius:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;">H</div>`,
             iconSize: [28, 28],
             iconAnchor: [14, 28],
             popupAnchor: [0, -28]
         });
     }
 
-    getPostazioneIcon(hasLiberi, isExternal = false) {
-        // Different styling for external centrals and HEMS
-        let bg, borderColor, textColor;
-        
-        if (isExternal) {
-            // White background with gray border for external centrals/HEMS
-            bg = "#ffffff";
-            borderColor = "#666666";
-            textColor = "#333333";
-        } else {
-            // Standard colors for current central
-            bg = hasLiberi ? "#43a047" : "#d32f2f";
-            borderColor = bg;
-            textColor = "#ffffff";
-        }
-        
+    getPostazioneIcon(hasLiberi, isEsterna = false) {
+        // Usa sfondo bianco per postazioni esterne, altrimenti verde/rosso per disponibilità
+        const bg = isEsterna ? "#ffffff" : (hasLiberi ? "#43a047" : "#d32f2f");
         return L.divIcon({
             className: 'postazione-marker',
-            html: `<div style="font-size:16px;background:${bg};color:${textColor};border:2px solid ${borderColor};border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.3);">🏠</div>`,
-            iconSize: [26, 26],  
-            iconAnchor: [13, 26],
-            popupAnchor: [0, -26]
+            html: `<div style="font-size:18px;background:${bg};border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border:1px solid #ccc;">🏠</div>`,
+            iconSize: [24, 24],  
+            iconAnchor: [12, 24],
+            popupAnchor: [0, -24]
         });
     }
 
@@ -1002,54 +1180,92 @@ class EmergencyDispatchGame {
         this._postazioneMarkers = [];
         
         // Get current central for filtering
-        const currentCentral = (window.selectedCentral || '').trim().toLowerCase();
+        const currentCentral = (window.selectedCentral||'').trim().toUpperCase();
         
         Object.values(this.postazioniMap).forEach(postazione => {
+           // Filtra postazioni per centrale: mostra postazioni limitrofe con sfondo bianco
+           const currentCentral = (window.selectedCentral||'').trim().toUpperCase();
+           
+           // Determina se è una postazione "limitrofa" basandosi sui mezzi che contiene
+           let isLimitrofa = false;
+           const centraliLimitrofe = this.getCentraliLimitrofe(currentCentral);
+           
+           // Verifica se la postazione contiene mezzi di centrali limitrofe
+           const mezziDellaPostazione = postazione.mezzi || [];
+           for (const mezzo of mezziDellaPostazione) {
+               const mezzoCentral = (mezzo.central || '').trim().toUpperCase();
+               if (mezzoCentral && mezzoCentral !== currentCentral) {
+                   if (centraliLimitrofe.includes(mezzoCentral) || mezzoCentral === 'HEMS') {
+                       isLimitrofa = true;
+                       break;
+                   }
+               }
+           }
+            
             const mezziLiberi = (this.mezzi || []).filter(m => {
-                const isDisponibile = m.stato === 1; // è in stato disponibile
-                const inThisPostazione = m.postazione === postazione.nome; // appartiene alla postazione
-                const correctCoordinates = Math.abs(m.lat - postazione.lat) < 0.0001 && 
-                                         Math.abs(m.lon - postazione.lon) < 0.0001; // coordinate corrette
-                return isDisponibile && inThisPostazione && correctCoordinates;
+               const isDisponibile = m.stato === 1; // è in stato disponibile
+               const inThisPostazione = m.postazione === postazione.nome; // appartiene alla postazione
+               const correctCoordinates = Math.abs(m.lat - postazione.lat) < 0.0001 && 
+                                        Math.abs(m.lon - postazione.lon) < 0.0001; // coordinate corrette
+               
+               return isDisponibile && inThisPostazione && correctCoordinates;
             });
+            
             const hasLiberi = mezziLiberi.length > 0;
+            
             const mezziPostazione = (this.mezzi || []).filter(m =>
-                m.stato !== 8 &&
-                m.postazione === postazione.nome &&
-                Math.abs(m.lat - postazione.lat) < 0.0001 &&
-                Math.abs(m.lon - postazione.lon) < 0.0001
+               m.stato !== 8 &&
+               m.postazione === postazione.nome &&
+               Math.abs(m.lat - postazione.lat) < 0.0001 &&
+               Math.abs(m.lon - postazione.lon) < 0.0001
             );
-            // NON saltare la postazione se non ci sono mezzi: mostra comunque la postazione con sfondo rosso e "Nessun mezzo"
+              
+            const tuttiMezziPostazione = (this.mezzi || []).filter(m =>
+               m.postazione === postazione.nome &&
+               Math.abs(m.lat - postazione.lat) < 0.0001 &&
+               Math.abs(m.lon - postazione.lon) < 0.0001
+            );
+            // Se non ci sono proprio mezzi in questa postazione dopo il filtro, allora salta
+            // if (tuttiMezziPostazione.length === 0) return;  // keep station visible even if all vehicles left coordinates
+            
             let mezziHtml = '';
             if (mezziPostazione.length > 0) {
                 mezziHtml = mezziPostazione.map(m => {
-                    // Aggiungi prefisso se il mezzo è di un'altra centrale
-                    let displayName = m.nome_radio;
-                    if (m.central && m.central !== currentCentral) {
-                        const centralMap = { nord: 'Nord', sud: 'Sud' };
-                        displayName = `(${centralMap[m.central] || m.central}) ${m.nome_radio}`;
-                    }
+                    // Aggiungi un identificatore data per facilitare gli aggiornamenti tramite DOM
                     return `<div data-mezzo-id="${m.nome_radio}">
-                        <b>${displayName}</b>
+                        <b>${m.nome_radio}</b>
                         <span style="color:#555;">(${m.tipo_mezzo || '-'}</span>
                         <span style="color:#888;">${m.convenzione ? m.convenzione : ''}</span>)
                     </div>`;
                 }).join('');
             } else {
-                mezziHtml = `<div style=\"color:#d32f2f;\"><i>Nessun mezzo</i></div>`;
+                mezziHtml = `<div style="color:#d32f2f;"><i>Nessun mezzo</i></div>`;
             }
             
-            // Determine if postazione is HEMS or from another central
-            const isExternal = postazione.isHems || 
-                              (postazione.isnord && currentCentral === 'sud') ||
-                              (postazione.issud && currentCentral === 'nord');
-            
+            // Usa sfondo bianco per postazioni limitrofe alla centrale selezionata
             const marker = L.marker([postazione.lat, postazione.lon], { 
-                icon: this.getPostazioneIcon(hasLiberi, isExternal) 
+                icon: this.getPostazioneIcon(hasLiberi, isLimitrofa) 
             }).addTo(this.map)
             .bindPopup(`<div style="font-weight:bold;font-size:15px;">${postazione.nome}</div>${mezziHtml}`);
             
             marker.on('popupopen', () => {
+                // Determine if postazione is limitrofa (for icon update)
+                const currentCentralNow = (window.selectedCentral||'').trim().toUpperCase();
+                const centraliLimitrofeNow = this.getCentraliLimitrofe(currentCentralNow);
+                
+                // Verifica se la postazione contiene mezzi di centrali limitrofe
+                let isSpecial = false;
+                const mezziDellaPostazioneNow = postazione.mezzi || [];
+                for (const mezzo of mezziDellaPostazioneNow) {
+                    const mezzoCentral = (mezzo.central || '').trim().toUpperCase();
+                    if (mezzoCentral && mezzoCentral !== currentCentralNow) {
+                        if (centraliLimitrofeNow.includes(mezzoCentral) || mezzoCentral === 'HEMS') {
+                            isSpecial = true;
+                            break;
+                        }
+                    }
+                }
+                
                 const mezziLiberiNow = (this.mezzi || []).filter(m =>
                     m.stato === 1 &&
                     m.postazione === postazione.nome &&
@@ -1068,15 +1284,8 @@ class EmergencyDispatchGame {
                 let mezziHtmlNow = '';
                 if (mezziPostazioneNow.length > 0) {
                     mezziHtmlNow = mezziPostazioneNow.map(m => {
-                        // Aggiungi prefisso se il mezzo è di un'altra centrale
-                        let displayName = m.nome_radio;
-                        if (m.central && m.central !== currentCentral) {
-                            const centralMap = { nord: 'Nord', sud: 'Sud' };
-                            displayName = `(${centralMap[m.central] || m.central}) ${m.nome_radio}`;
-                        }
-                        
                         return `<div data-mezzo-id="${m.nome_radio}">
-                            <b>${displayName}</b>
+                            <b>${m.nome_radio}</b>
                             <span style="color:#555;">(${m.tipo_mezzo || '-'}</span>
                             <span style="color:#888;">${m.convenzione ? m.convenzione : ''}</span>)
                         </div>`;
@@ -1085,12 +1294,10 @@ class EmergencyDispatchGame {
                     mezziHtmlNow = `<div style="color:#d32f2f;"><i>Nessun mezzo</i></div>`;
                 }
                 
-                const isExternalNow = postazione.isHems || 
-                                    (postazione.isnord && currentCentral === 'sud') ||
-                                    (postazione.issud && currentCentral === 'nord');
-                
-                marker.setIcon(this.getPostazioneIcon(hasLiberiNow, isExternalNow));
-                marker.setPopupContent(`<div style="font-weight:bold;font-size:15px;">${postazione.nome}</div>${mezziHtmlNow}`);
+                marker.setPopupContent(
+                    `<div style="font-weight:bold;font-size:15px;">${postazione.nome}</div>${mezziHtmlNow}`
+                );
+                marker.setIcon(this.getPostazioneIcon(hasLiberiNow, isSpecial));
             });
             
             this._postazioneMarkers.push(marker);
@@ -1106,17 +1313,20 @@ class EmergencyDispatchGame {
             }
         });
         this.mezzi.forEach(m => {
-            // Never show markers for vehicles in state 3 (sul posto)
+            // Filter out SRA <-> SRM vehicles not belonging to current view
+            const currentCentral = (window.selectedCentral||'').trim().toUpperCase();
+            const vehicleCentral = (m.central||'').trim().toUpperCase();
+            if ((currentCentral === 'SRA' && vehicleCentral === 'SRM') ||
+                (currentCentral === 'SRM' && vehicleCentral === 'SRA')) return;            // Never show markers for vehicles in state 3 (sul posto)
             if (m.stato === 3) return;
             // Show markers only for movement states 2, 4 and 7
             if (![2, 4, 7].includes(m.stato)) return;
             
             // Determine icon based on vehicle type
-            let iconUrl = 'src/assets/MSB.png'; // Default icon
+            let iconUrl = 'src/assets/MSB.png'; // Default icon for MSB, MSI, MSA
             if (m.tipo_mezzo && m.tipo_mezzo.toUpperCase().includes('ELI')) {
                 iconUrl = 'src/assets/ELI.png';
-            } else if (m.tipo_mezzo && (m.tipo_mezzo.startsWith('MSA1') || m.tipo_mezzo.startsWith('MSA2'))
-           && m.tipo_mezzo !== 'MSA1_A' && m.tipo_mezzo !== 'MSA2_A') {
+            } else if (m.tipo_mezzo && (m.tipo_mezzo.startsWith('ILS') || m.tipo_mezzo.startsWith('ALS') || m.tipo_mezzo.startsWith('VLV'))) {
                 iconUrl = 'src/assets/MSA.png';
             }
             
@@ -1128,13 +1338,13 @@ class EmergencyDispatchGame {
                 popupAnchor: [0, -32]
             });
             
-            // Compute displayName with prefix when vehicle from another central
-            const currentCentral = (window.selectedCentral || '').trim().toLowerCase();
+            // Compute displayName - per ora non usiamo prefissi nel nuovo sistema
             let markerName = m.nome_radio;
-            if (m.central && m.central !== currentCentral) {
-                const centralMap = { nord: 'Nord', sud: 'Sud' };
-                markerName = `(${centralMap[m.central] || m.central}) ${m.nome_radio}`;
-            }
+            
+            // Se necessario si possono aggiungere prefissi per distinguere NORD/SUD
+            // if (vehicleCentral && vehicleCentral !== currentCentral) {
+            //     markerName = `(${vehicleCentral}) ${m.nome_radio}`;
+            // }
             
             // Get stato description
             const statiMezzi = {
@@ -1223,77 +1433,59 @@ class EmergencyDispatchGame {
     }
 
     generateNewCall() {
-        // Inizializza array per tracciare chiamate recenti se non esiste
-        if (!this.recentChiamate) this.recentChiamate = [];
-        if (!this.recentIndirizzi) this.recentIndirizzi = [];
-        
-        // Seleziona template di chiamata evitando ripetizioni recenti
+        // Seleziona template di chiamata
         let chiamataTemplate = null;
         let testo_chiamata = '';
-        if (this.chiamateTemplate) {
-            const keys = Object.keys(this.chiamateTemplate);
-            let availableKeys = keys.filter(key => !this.recentChiamate.includes(key));
-            
-            // Se tutti i template sono stati usati di recente, reset della lista
-            if (availableKeys.length === 0) {
-                this.recentChiamate = [];
-                availableKeys = keys;
-            }
-            
-            const sel = availableKeys[Math.floor(Math.random() * availableKeys.length)];
-            chiamataTemplate = this.chiamateTemplate[sel];
-            testo_chiamata = chiamataTemplate.testo_chiamata;
-            
-            // Aggiungi alla lista delle chiamate recenti
-            this.recentChiamate.push(sel);
-            // Mantieni solo le ultime 8 chiamate per evitare ripetizioni immediate
-            if (this.recentChiamate.length > 8) {
-                this.recentChiamate.shift();
-            }
+        
+        if (!this.chiamateTemplate) {
+            console.warn('[WARNING generateNewCall] chiamateTemplate non disponibile, chiamata saltata');
+            return;
         }
+        
+        const keys = Object.keys(this.chiamateTemplate);
+        const sel = keys[Math.floor(Math.random() * keys.length)];
+        chiamataTemplate = this.chiamateTemplate[sel];
+        testo_chiamata = chiamataTemplate.testo_chiamata;
+        
         // Determina lista indirizzi in base al placeholder nel testo
         const rawText = testo_chiamata || '';
         // Match any placeholder '(X)' and capture full content including 'indirizzo' if presente
         const match = rawText.match(/\(\s*([^)]+?)\s*\)/i);
         let sourceList = window.indirizziReali || [];
         const catMap = window.categorieIndirizzi || {};
+        
+        console.log(`[DEBUG generateNewCall] Testo chiamata prima:`, testo_chiamata);
+        console.log(`[DEBUG generateNewCall] Match placeholder:`, match);
+        console.log(`[DEBUG generateNewCall] sourceList.length:`, sourceList.length);
+        console.log(`[DEBUG generateNewCall] catMap keys:`, Object.keys(catMap));
+        
         if (match) {
             // Usa il contenuto completo del placeholder per formare la chiave
             const keyRaw = match[1].toLowerCase().trim();
             const key = keyRaw.replace(/\s+/g, '_');
+            console.log(`[DEBUG generateNewCall] Match trovato:`, keyRaw, '→', key);
             if (catMap[key] && catMap[key].length) {
                 sourceList = catMap[key];
+                console.log(`[DEBUG generateNewCall] Usando categoria:`, key, 'con', sourceList.length, 'elementi');
+            } else {
+                console.log(`[DEBUG generateNewCall] Categoria non trovata:`, key);
             }
         }
-        // Seleziona indirizzo evitando ripetizioni recenti
-        let availableIndices = [];
-        for (let i = 0; i < sourceList.length; i++) {
-            const addr = sourceList[i].indirizzo;
-            if (!this.recentIndirizzi.includes(addr)) {
-                availableIndices.push(i);
-            }
+        const idx = Math.floor(Math.random() * sourceList.length);
+        const indirizzo = sourceList[idx] || { indirizzo: 'Indirizzo sconosciuto', lat: 44.4949, lon: 11.3426 };
+        
+        // Verifica coordinate valide nell'indirizzo selezionato
+        if (!indirizzo.lat || !indirizzo.lon || isNaN(indirizzo.lat) || isNaN(indirizzo.lon)) {
+            indirizzo.lat = 44.4949; // Coordinate di default Bologna
+            indirizzo.lon = 11.3426;
         }
         
-        // Se tutti gli indirizzi sono stati usati di recente, reset della lista
-        if (availableIndices.length === 0) {
-            this.recentIndirizzi = [];
-            availableIndices = Array.from({length: sourceList.length}, (_, i) => i);
-        }
-        
-        const idx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-        const indirizzo = sourceList[idx] || { indirizzo: 'Indirizzo sconosciuto', lat: 45.68, lon: 9.67 };
-        
-        // Aggiungi alla lista degli indirizzi recenti
-        this.recentIndirizzi.push(indirizzo.indirizzo);
-        // Mantieni solo gli ultimi 15 indirizzi per evitare ripetizioni immediate
-        if (this.recentIndirizzi.length > 15) {
-            this.recentIndirizzi.shift();
-        }
-        // Sostituisci ogni placeholder con il label della categoria (solo parte prima della virgola)
+        // Sostituisci ogni placeholder con il label della categoria
         const placeholderRegex = /\((?:indirizzo\s*)?[^)]+\)/gi;
-        // Label: parte prima della virgola (es. 'RSA Treviglio')
         const categoryLabel = indirizzo.indirizzo.split(',')[0];
+        
         testo_chiamata = (testo_chiamata || '').replace(placeholderRegex, categoryLabel);
+        
         // Fallback testo chiamata se vuoto
         if (!testo_chiamata.trim()) {
             testo_chiamata = 'Paziente con sintomi da valutare...';
@@ -1329,7 +1521,7 @@ class EmergencyDispatchGame {
         const year = now.getFullYear();
         const decina = Math.floor((year % 100) / 10);
         const unita = year % 10;
-        const central = window.selectedCentral || 'nord';
+        const central = window.selectedCentral || 'SRA';
         const codeMap = { SRA: 1, SRL: 3, SRM: 5, SRP: 7 };
         const code = codeMap[central] || 1;
         // incrementa contatore progressivo per central
@@ -1356,17 +1548,23 @@ class EmergencyDispatchGame {
         };
         this.calls.set(id, call);
         this.ui.showNewCall(call);
-        if (this.map) {
-           
-            const marker = L.marker([call.lat, call.lon], {
-                icon: L.icon({
-                    iconUrl: 'src/assets/marker-rosso.png',
-                    iconSize: [36, 36],    // increased size
-                    iconAnchor: [18, 36],  // center bottom
-                    popupAnchor: [0, -36]
-                })
-            }).addTo(this.map).bindPopup(`<b>Chiamata</b><br>${call.indirizzo || call.location || 'Indirizzo sconosciuto'}`);
-            call._marker = marker;
+        
+        if (this.map && call.lat && call.lon && !isNaN(call.lat) && !isNaN(call.lon)) {
+            try {
+                const marker = L.marker([call.lat, call.lon], {
+                    icon: L.icon({
+                        iconUrl: 'src/assets/marker-rosso.png',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 36],
+                        popupAnchor: [0, -36]
+                    })
+                }).addTo(this.map).bindPopup(`<b>Chiamata</b><br>${call.indirizzo || call.location || 'Indirizzo sconosciuto'}`);
+                call._marker = marker;
+            } catch (e) {
+                console.error('[ERROR] Errore creazione marker:', e);
+            }
+        } else if (!this.map) {
+            call._pendingMarker = true; // Segna per aggiunta successiva
         }
     }
 
@@ -1448,11 +1646,12 @@ class EmergencyDispatchGame {
                 else if (m.stato === 7) icon = '↩️';
                 const checked = (call.mezziAssegnati||[]).includes(m.nome_radio) ? 'checked' : '';
                 const disabledAttr = ![1,2,7].includes(m.stato) ? 'disabled' : '';
-                const currentCentral = (window.selectedCentral||'').trim().toLowerCase();
+                const currentCentral = (window.selectedCentral||'').trim().toUpperCase();
+                const vehicleCentral = (m.central||'').trim().toUpperCase();
+                const prefixMap = { SRA:['SRL','SRP'], SRL:['SRA','SRM','SRP'], SRM:['SRL','SRP'], SRP:['SRA','SRL','SRM'] };
                 let displayName = m.nome_radio;
-                if (m.central && m.central !== currentCentral) {
-                    const centralMap = { nord: 'Nord', sud: 'Sud' };
-                    displayName = `(${centralMap[m.central] || m.central}) ${m.nome_radio}`;
+                if (vehicleCentral && prefixMap[currentCentral]?.includes(vehicleCentral)) {
+                    displayName = `(${vehicleCentral}) ${m.nome_radio}`;
                 }
                 const distanza = (m._dist !== undefined && isFinite(m._dist))
                     ? `${m._dist.toFixed(1)} km`
@@ -1525,7 +1724,15 @@ class EmergencyDispatchGame {
         const luogoSelect = document.getElementById('luogo');
         if (luogoSelect) {
             luogoSelect.innerHTML = '';
-            const opzioniLuogo = ['Casa', 'Strada', 'Esercizi pubblici', 'Impianto lavorativo', 'Impianto sportivo', 'Scuola', 'Altro'];
+            const opzioniLuogo = [
+                'S - Strada',
+                'P - Esercizio pubblico', 
+                'Y - Impianto sportivo',
+                'K - Casa',
+                'L - Impianto lavorativo',
+                'Q - Scuola',
+                'Z - Altro'
+            ];
             opzioniLuogo.forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt;
@@ -1538,7 +1745,23 @@ class EmergencyDispatchGame {
         if (patologiaSelect) {
             patologiaSelect.innerHTML = '';
             const opzioniPatologia = [
-                'Traumatica','Cardiocircolatoria','Respiratoria','Neurologica','Psichiatrica','Tossicologica','Metabolica','Gastroenterologica','Urologica','Oculistica','Otorinolaringoiatrica','Dermatologica','Ostetrico-ginecologica','Infettiva','Neoplastica','Altra patologia','Non identificata'
+                'C 1 - Traumatica',
+                'C 2 - Cardiocircolatoria', 
+                'C 3 - Respiratoria',
+                'C 4 - Neurologica',
+                'C 5 - Psichiatrica',
+                'C 6 - Neoplastica',
+                'C 7 - Tossicologica',
+                'C 8 - Metabolica',
+                'C 9 - Gastroenterologica',
+                'C10 - Urologica',
+                'C11 - Oculistica',
+                'C12 - Otorinolaringoiatrica',
+                'C13 - Dermatologica',
+                'C14 - Ostetricoginecologica',
+                'C15 - Infettiva',
+                'C19 - Altra patologia',
+                'C20 - Non identificata'
             ];
             opzioniPatologia.forEach(opt => {
                 const option = document.createElement('option');
@@ -1551,7 +1774,7 @@ class EmergencyDispatchGame {
         const codiceSelect = document.getElementById('codice');
         if (codiceSelect) {
             codiceSelect.innerHTML = '';
-            ['Rosso','Giallo','Verde'].forEach(opt => {
+            ['Bianco', 'Verde', 'Giallo', 'Rosso', 'Blu'].forEach(opt => {
                 const option = document.createElement('option');
                 option.value = opt;
                 option.textContent = opt;
@@ -1566,8 +1789,8 @@ class EmergencyDispatchGame {
 
         const btnsRapidi = [
             {tipo:'MSB', label:'MSB'},
-            {tipo:'MSA1', label:'MSA1'},
-            {tipo:'MSA2', label:'MSA2'},
+            {tipo:'MSI,ILS', label:'MSI/ILS'},
+            {tipo:'MSA,ALS', label:'MSA/ALS'},
             {tipo:'ELI', label:'ELI'}
         ];
         const btnsRapidiDiv = document.getElementById('btnsRapidiMezzi');
@@ -1607,11 +1830,12 @@ class EmergencyDispatchGame {
             // Disable checkbox if vehicle is not in allowed states
             const disabledAttr = ![1,2,7].includes(m.stato) ? 'disabled' : '';
             // Compute displayName with prefix for vehicles from other centrals
-            const currentCentral = (window.selectedCentral||'').trim().toLowerCase();
+            const currentCentral = (window.selectedCentral||'').trim().toUpperCase();
+            const vehicleCentral = (m.central||'').trim().toUpperCase();
+            const prefixMap = { SRA:['SRL','SRP'], SRL:['SRA','SRM','SRP'], SRM:['SRL','SRP'], SRP:['SRA','SRL','SRM'] };
             let displayName = m.nome_radio;
-            if (m.central && m.central !== currentCentral) {
-                const centralMap = { nord: 'Nord', sud: 'Sud' };
-                displayName = `(${centralMap[m.central] || m.central}) ${m.nome_radio}`;
+            if (vehicleCentral && prefixMap[currentCentral]?.includes(vehicleCentral)) {
+                displayName = `(${vehicleCentral}) ${m.nome_radio}`;
             }
             // Compute distance display for each mezzo
             const distanza = (m._dist !== undefined && isFinite(m._dist))
@@ -1640,7 +1864,17 @@ class EmergencyDispatchGame {
                     // Seleziona solo il primo mezzo non ancora selezionato di quel tipo
                     const checkboxes = Array.from(document.querySelectorAll('#mezziAssegnatiScroll input[type=checkbox]'));
                     // Consider only vehicles in state 1, 2 or 7
-                    const mezziTipo = mezziFiltrati.filter(m => m.tipo_mezzo && m.tipo_mezzo.startsWith(tipo) && [1,7].includes(m.stato));
+                    let mezziTipo = [];
+                    if (tipo === 'MSI,ILS') {
+                        // Seleziona mezzi di tipo MSI o ILS
+                        mezziTipo = mezziFiltrati.filter(m => m.tipo_mezzo && (m.tipo_mezzo.startsWith('MSI') || m.tipo_mezzo.startsWith('ILS')) && [1,7].includes(m.stato));
+                    } else if (tipo === 'MSA,ALS') {
+                        // Seleziona mezzi di tipo MSA, ALS o VLV
+                        mezziTipo = mezziFiltrati.filter(m => m.tipo_mezzo && (m.tipo_mezzo.startsWith('MSA') || m.tipo_mezzo.startsWith('ALS') || m.tipo_mezzo.startsWith('VLV')) && [1,7].includes(m.stato));
+                    } else {
+                        // Per MSB, ELI e altri tipi, usa la logica originale
+                        mezziTipo = mezziFiltrati.filter(m => m.tipo_mezzo && m.tipo_mezzo.startsWith(tipo) && [1,7].includes(m.stato));
+                    }
                     for (const m of mezziTipo) {
                         const cb = checkboxes.find(c => c.value === m.nome_radio);
                         if (cb && !cb.checked) {
@@ -1717,13 +1951,9 @@ class EmergencyDispatchGame {
                     setStatoMezzo(mezzo, 7);
                     
                     // Avvia il rientro in sede
-
                     if (window.game && window.game.gestisciStato7) {
                         window.game.gestisciStato7(mezzo);
                     }
-                    
-                    // Aggiungi una comunicazione
-                    aggiungiComunicazioneMezzo(mezzo, 'Libero in sede');
                }
             }
         });
@@ -1995,3 +2225,58 @@ async function getVelocitaMezzo(tipoMezzo) {
 
 // Esporta la classe EmergencyDispatchGame globalmente
 window.EmergencyDispatchGame = EmergencyDispatchGame;
+
+// Inizializzazione della selezione centrale per Emilia Romagna
+document.addEventListener('DOMContentLoaded', function() {
+    const startButton = document.getElementById('start-central');
+    const centralSelect = document.getElementById('central-select');
+    const overlay = document.getElementById('central-selector');
+    
+    if (startButton && centralSelect && overlay) {
+        startButton.addEventListener('click', async function() {
+            const selectedCentral = centralSelect.value;
+            
+            // Nascondi l'overlay di selezione
+            overlay.style.display = 'none';
+            
+            // Configura i file dati in base alla centrale selezionata
+            let mezziFile, indirizziFile, ospedaliFile, hemsFile;
+            
+            switch (selectedCentral) {
+                case 'OVEST':
+                    mezziFile = 'src/data/Mezzi_Ovest.json';
+                    indirizziFile = 'src/data/Indirizzi_Ovest.json';
+                    ospedaliFile = 'src/data/Ospedali_Ovest.json';
+                    hemsFile = 'src/data/HEMS_ER.json';
+                    document.querySelector('.header-title').textContent = 'C.O. 118 Emilia Ovest';
+                    break;
+                case 'EST':
+                    mezziFile = 'src/data/Mezzi_Est.json';
+                    indirizziFile = 'src/data/Indirizzi_Est.json';
+                    ospedaliFile = 'src/data/Ospedali_Est.json';
+                    hemsFile = 'src/data/HEMS_ER.json';
+                    document.querySelector('.header-title').textContent = 'C.O. 118 Emilia Est';
+                    break;
+                case 'ROMAGNA':
+                    mezziFile = 'src/data/Mezzi_Romagna.json';
+                    indirizziFile = 'src/data/Indirizzi_Romagna.json';
+                    ospedaliFile = 'src/data/Ospedali_Romagna.json';
+                    hemsFile = 'src/data/HEMS_ER.json';
+                    document.querySelector('.header-title').textContent = 'C.O. 118 Romagna';
+                    break;
+                default:
+                    console.error('Centrale non riconosciuta:', selectedCentral);
+                    return;
+            }
+            
+            // Avvia il gioco
+            try {
+                window.game = new EmergencyDispatchGame();
+                console.log(`Gioco avviato per centrale: ${selectedCentral}`);
+            } catch (error) {
+                console.error('Errore durante l\'avvio del gioco:', error);
+                alert('Errore durante l\'avvio della simulazione. Controlla la console per i dettagli.');
+            }
+        });
+    }
+});

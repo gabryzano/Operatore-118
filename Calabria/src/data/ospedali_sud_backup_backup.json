@@ -12,8 +12,8 @@
     "NCH": true,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.272056,
-    "lon": 16.066296
+    "lat": 39.142009,
+    "lon": 16.136315
   },
   {
     "OSPEDALE": "H G.O.M Reggio Calabria",
@@ -28,8 +28,8 @@
     "NCH": true,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.058186,
-    "lon": 16.329528
+    "lat": 39.2418,
+    "lon": 16.23981
   },
   {
     "OSPEDALE": "H Lamezia Terme",
@@ -44,8 +44,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.531706,
-    "lon": 16.370874
+    "lat": 39.458938,
+    "lon": 16.249125
   },
   {
     "OSPEDALE": "H Vibo Valentia",
@@ -60,8 +60,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.226813,
-    "lon": 16.550521
+    "lat": 39.299429,
+    "lon": 16.42481
   },
   {
     "OSPEDALE": "H Polistena",
@@ -76,8 +76,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.3783,
-    "lon": 15.996357
+    "lat": 39.242938,
+    "lon": 16.43531
   },
   {
     "OSPEDALE": "H Locri",
@@ -92,8 +92,8 @@
     "NCH": false,
     "RIANIMAZIONE": true,
     "PSICHIATRIA": true,
-    "lat": 39.538359,
-    "lon": 16.393924
+    "lat": 39.421671,
+    "lon": 16.20844
   },
   {
     "OSPEDALE": "H Soverato",
@@ -108,8 +108,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.181772,
-    "lon": 16.546031
+    "lat": 39.141886,
+    "lon": 16.115581
   },
   {
     "OSPEDALE": "H Soveria Mannelli",
@@ -124,8 +124,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.303154,
-    "lon": 16.062032
+    "lat": 39.190163,
+    "lon": 16.248883
   },
   {
     "OSPEDALE": "H Tropea",
@@ -140,8 +140,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.235708,
-    "lon": 15.937074
+    "lat": 39.436128,
+    "lon": 16.107696
   },
   {
     "OSPEDALE": "H Serra San Bruno",
@@ -156,8 +156,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.30842,
-    "lon": 16.328156
+    "lat": 39.20668,
+    "lon": 15.936807
   },
   {
     "OSPEDALE": "H Melito Porto Salvo",
@@ -172,8 +172,8 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.505393,
-    "lon": 16.181646
+    "lat": 39.363884,
+    "lon": 16.165377
   },
   {
     "OSPEDALE": "H Gioia Tauro",
@@ -188,7 +188,7 @@
     "NCH": false,
     "RIANIMAZIONE": false,
     "PSICHIATRIA": false,
-    "lat": 39.211526,
-    "lon": 16.044244
+    "lat": 39.094963,
+    "lon": 16.422903
   }
 ]

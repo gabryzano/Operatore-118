@@ -18,8 +18,8 @@
             border-radius: 7px;
             box-shadow: 0 4px 24px #0002;
             z-index: 10000;
-            min-width: 380px;
-            max-width: 520px;
+            min-width: 340px;
+            max-width: 480px;
             padding: 0;
         }
         .popup-header {
@@ -75,10 +75,11 @@
         <div class="central-logo">
           <img src="src/assets/logo gioco.png" alt="Logo Gioco" />
         </div>
-        <h2>Seleziona la Centrale</h2>
+        <h2>Seleziona la Centrale Operativa</h2>
         <select id="central-select">
-          <option value="nord" selected>SUEM Nord</option>
-          <option value="sud">SUEM Sud</option>
+          <option value="OVEST">Emilia Ovest</option>
+          <option value="EST">Emilia Est </option>
+          <option value="ROMAGNA">Romagna </option>
         </select>
         <button id="start-central">Avvia simulazione</button>
       </div>
@@ -146,7 +147,7 @@
                 <select id="patologia" name="patologia"></select>
                 <label for="note1" style="font-weight:bold;color:#003366;">Note sanitarie 1:</label>
                 <input id="note1" name="note1" type="text">
-                <label for="note2" style="font-weight:bold;color:#003366;">Note sanitarie 2:</label>
+                <label for="note2" style="font-weight:bold;color:#003366;">Note evento:</label>
                 <input id="note2" name="note2" type="text">
             </div>
             <div style="margin:4px 0; display:flex; align-items:center; gap:12px;">
@@ -244,7 +245,7 @@
             <div style="margin-bottom:20px;">
                 <label for="auto-calls" style='display:flex;align-items:center;gap:8px;font-weight:600;color:#333;cursor:pointer;'>
                     <input type="checkbox" id="auto-calls" name="auto-calls" checked style="width:18px;height:18px;accent-color:#1976d2;">
-                    Ferma nuove chiamate
+                    Generazione automatica chiamate
                 </label>
             </div>
             <div style="display:flex;gap:12px;justify-content:flex-end;">
@@ -264,20 +265,52 @@
     <script src="src/js/core/game.js"></script>
     <!-- Initialize the game after selecting central -->
     <script>
-    document.getElementById('start-central').onclick = async () => {
-        // Save selected central
-        window.selectedCentral = document.getElementById('central-select').value;
-        // Hide overlay
+        document.getElementById('start-central').onclick = async function() {
+        const selectedCentral = document.getElementById('central-select').value;
+        
+        // Nascondi l'overlay di selezione
         document.getElementById('central-selector').style.display = 'none';
-        // Aggiorna il titolo in topbar con la centrale selezionata
-        const sel = document.getElementById('central-select');
-        const hdr = document.querySelector('.header-title');
-        if (hdr) hdr.textContent = sel.options[sel.selectedIndex].text;
-        // Load corresponding indirizzi file for selected central
+        
+        // Configura i file dati in base alla centrale selezionata
+        let mezziFile, indirizziFile, ospedaliFile, hemsFile;
+        
+        switch (selectedCentral) {
+            case 'OVEST':
+                mezziFile = 'src/data/Mezzi_Ovest.json';
+                indirizziFile = 'src/data/Indirizzi_Ovest.json';
+                ospedaliFile = 'src/data/Ospedali_Ovest.json';
+                hemsFile = 'src/data/HEMS_ER.json';
+                document.querySelector('.header-title').textContent = 'C.O. 118 Emilia Ovest';
+                break;
+            case 'EST':
+                mezziFile = 'src/data/Mezzi_Est.json';
+                indirizziFile = 'src/data/Indirizzi_Est.json';
+                ospedaliFile = 'src/data/Ospedali_Est.json';
+                hemsFile = 'src/data/HEMS_ER.json';
+                document.querySelector('.header-title').textContent = 'C.O. 118 Emilia Est';
+                break;
+            case 'ROMAGNA':
+                mezziFile = 'src/data/Mezzi_Romagna.json';
+                indirizziFile = 'src/data/Indirizzi_Romagna.json';
+                ospedaliFile = 'src/data/Ospedali_Romagna.json';
+                hemsFile = 'src/data/HEMS_ER.json';
+                document.querySelector('.header-title').textContent = 'C.O. 118 Romagna';
+                break;
+            default:
+                console.error('Centrale non riconosciuta:', selectedCentral);
+                return;
+        }
+        
+        // Load indirizzi file
         try {
-            const path = `src/data/indirizzi_${window.selectedCentral}.json`;
-            const resp = await fetch(path);
+            console.log(`[DEBUG] Caricamento indirizzi da: ${indirizziFile}`);
+            const resp = await fetch(indirizziFile);
+            if (!resp.ok) {
+                throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+            }
             const data = await resp.json();
+            console.log(`[DEBUG] Indirizzi caricati:`, data.length, 'elementi');
+            
             // Costruisci mappa categorie per selezione indirizzo in generateNewCall
             window.categorieIndirizzi = {};
             data.forEach(item => {
@@ -294,24 +327,91 @@
             });
             // Popola lista generale di indirizzi unendo tutte le categorie
             window.indirizziReali = Object.values(window.categorieIndirizzi).flat();
+            
+            console.log(`[DEBUG] Categorie create:`, Object.keys(window.categorieIndirizzi));
+            console.log(`[DEBUG] Totale indirizzi reali:`, window.indirizziReali.length);
         } catch (e) {
             console.error('Error loading indirizzi:', e);
             window.indirizziReali = [];
             window.categorieIndirizzi = {};
         }
+        
         // Initialize simulation day/time
         const now = new Date();
         const days = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
         window.simDay = days[now.getDay()];
         window._dayManuallySet = false;
         window.simTime = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        
+        // Store selected files globally
+        window.selectedMezziFile = mezziFile;
+        window.selectedOspedaliFile = ospedaliFile;
+        window.selectedHemsFile = hemsFile;
+        window.selectedCentral = selectedCentral;
+        
         // Start game
         if (typeof EmergencyDispatchGame === 'undefined') {
             console.error('EmergencyDispatchGame non è definito. Assicurati che game.js sia caricato correttamente.');
             return;
         }
-        window.game = new EmergencyDispatchGame();
-        game.initialize();
+        
+        try {
+            window.game = new EmergencyDispatchGame();
+            await window.game.initialize();
+            console.log(`Gioco avviato per centrale: ${selectedCentral}`);
+        } catch (error) {
+            console.error('Errore durante l\'avvio del gioco:', error);
+            alert('Errore durante l\'avvio della simulazione. Controlla la console per i dettagli.');
+        }
+    };
+
+    // Funzione globale per cambiare centrale dinamicamente
+    window.changeCentral = async function(newCentral) {
+        if (!window.game) return;
+        
+        // Aggiorna la centrale selezionata
+        window.selectedCentral = newCentral;
+        
+        // Ricarica indirizzi per la nuova centrale
+        try {
+            const path = `src/data/indirizzi ${newCentral.toLowerCase()}.json`;
+            const resp = await fetch(path);
+            const data = await resp.json();
+            
+            window.categorieIndirizzi = {};
+            data.forEach(item => {
+                Object.keys(item).forEach(prop => {
+                    if (prop === 'lat' || prop === 'lon') return;
+                    const key = prop.trim().toLowerCase().replace(/\s+/g, '_');
+                    window.categorieIndirizzi[key] = window.categorieIndirizzi[key] || [];
+                    window.categorieIndirizzi[key].push({
+                        indirizzo: item[prop],
+                        lat: item.lat,
+                        lon: item.lon
+                    });
+                });
+            });
+            window.indirizziReali = Object.values(window.categorieIndirizzi).flat();
+        } catch (e) {
+            console.error('Error loading indirizzi:', e);
+        }
+        
+        // Ricarica gli ospedali
+        await window.game.loadHospitals();
+        
+        // Reinizializza la mappa con la nuova posizione
+        window.game.initializeMap();
+        
+        // Aggiorna markers postazioni e mezzi
+        window.game.updatePostazioneMarkers();
+        window.game.updateMezzoMarkers();
+        
+        // Aggiorna UI
+        if (window.game.ui && typeof window.game.ui.updateStatoMezzi === 'function') {
+            window.game.ui.updateStatoMezzi();
+        }
+        
+        console.log(`Centrale cambiata a: ${newCentral}`);
     };
     </script>
     
@@ -338,8 +438,8 @@
                 document.getElementById('sim-minute').value = m;
                 // Sync mute checkbox
                 document.getElementById('mute-sounds').checked = !!window.soundMuted;
-                // Sync auto calls checkbox
-                document.getElementById('auto-calls').checked = window.autoCallsEnabled !== false; // default true
+                // Sync auto-calls checkbox
+                document.getElementById('auto-calls').checked = window.autoCallsEnabled !== false;
                 // Sync call frequency slider
                 const slider = document.getElementById('call-frequency-slider');
                 const display = document.getElementById('frequency-display');
@@ -349,7 +449,6 @@
                 }
                 document.getElementById('sim-settings-popup').style.display = 'block';
             };
-            
             // Annulla
             document.getElementById('sim-settings-cancel').onclick = function() {
                 document.getElementById('sim-settings-popup').style.display = 'none';
@@ -401,9 +500,7 @@
                 }
                 
                 document.getElementById('sim-settings-popup').style.display = 'none';
-            };
-            
-            // Mostra giorno nella clock
+            };            // Mostra giorno nella clock
             const origUpdateSimClock = window.updateSimClock;
             window.updateSimClock = function() {
                 if(origUpdateSimClock) origUpdateSimClock();
